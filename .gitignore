@@ -1,0 +1,11 @@
+.build/
+.swiftpm/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+
+# Generated distribution and local investigation artifacts.
+dist/*.dmg
+dist/dmg-root/
+tmp/

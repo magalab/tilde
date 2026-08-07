@@ -1,0 +1,160 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		100000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000001 /* main.swift */; };
+		100000000000000000000002 /* TildeApplication in Frameworks */ = {isa = PBXBuildFile; productRef = 900000000000000000000001 /* TildeApplication */; };
+		100000000000000000000003 /* ExtensionPreviewProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000002 /* ExtensionPreviewProvider.swift */; };
+		100000000000000000000004 /* TildeQuickLook in Frameworks */ = {isa = PBXBuildFile; productRef = 900000000000000000000002 /* TildeQuickLook */; };
+		100000000000000000000005 /* TildeQuickLook.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 200000000000000000000008 /* TildeQuickLook.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		100000000000000000000006 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000009 /* AppIcon.icns */; };
+		100000000000000000000007 /* AppIcon.icns in QuickLook Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000009 /* AppIcon.icns */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A00000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 600000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 700000000000000000000002;
+			remoteInfo = TildeQuickLookExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		300000000000000000000005 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (100000000000000000000005 /* TildeQuickLook.appex in Embed App Extensions */, );
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		200000000000000000000001 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		200000000000000000000002 /* ExtensionPreviewProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionPreviewProvider.swift; sourceTree = "<group>"; };
+		200000000000000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		200000000000000000000004 /* Tilde.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tilde.entitlements; sourceTree = "<group>"; };
+		200000000000000000000005 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		200000000000000000000006 /* TildeQuickLook.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TildeQuickLook.entitlements; sourceTree = "<group>"; };
+		200000000000000000000007 /* Tilde.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tilde.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		200000000000000000000008 /* TildeQuickLook.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TildeQuickLook.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		200000000000000000000009 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = ../AppIcon.icns; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		300000000000000000000001 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000002 /* TildeApplication in Frameworks */, ); runOnlyForDeploymentPostprocessing = 0; };
+		300000000000000000000003 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000004 /* TildeQuickLook in Frameworks */, ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		400000000000000000000001 = {
+			isa = PBXGroup;
+			children = (400000000000000000000002 /* App */, 400000000000000000000003 /* QuickLook */, 200000000000000000000009 /* AppIcon.icns */, 400000000000000000000004 /* Products */, );
+			sourceTree = "<group>";
+		};
+		400000000000000000000002 /* App */ = {isa = PBXGroup; children = (200000000000000000000001 /* main.swift */, 200000000000000000000003 /* Info.plist */, 200000000000000000000004 /* Tilde.entitlements */, ); path = App; sourceTree = "<group>"; };
+		400000000000000000000003 /* QuickLook */ = {isa = PBXGroup; children = (200000000000000000000002 /* ExtensionPreviewProvider.swift */, 200000000000000000000005 /* Info.plist */, 200000000000000000000006 /* TildeQuickLook.entitlements */, ); path = QuickLook; sourceTree = "<group>"; };
+		400000000000000000000004 /* Products */ = {isa = PBXGroup; children = (200000000000000000000007 /* Tilde.app */, 200000000000000000000008 /* TildeQuickLook.appex */, ); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		700000000000000000000001 /* TildeHost */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 800000000000000000000002 /* Build configuration list for PBXNativeTarget "TildeHost" */;
+			buildPhases = (300000000000000000000002 /* Sources */, 300000000000000000000001 /* Frameworks */, 300000000000000000000006 /* Resources */, 300000000000000000000005 /* Embed App Extensions */, );
+			buildRules = ();
+			dependencies = (A10000000000000000000001 /* PBXTargetDependency */, );
+			name = TildeHost;
+			packageProductDependencies = (900000000000000000000001 /* TildeApplication */, );
+			productName = Tilde;
+			productReference = 200000000000000000000007 /* Tilde.app */;
+			productType = "com.apple.product-type.application";
+		};
+		700000000000000000000002 /* TildeQuickLookExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 800000000000000000000003 /* Build configuration list for PBXNativeTarget "TildeQuickLook" */;
+			buildPhases = (300000000000000000000004 /* Sources */, 300000000000000000000003 /* Frameworks */, 300000000000000000000007 /* QuickLook Resources */, );
+			buildRules = ();
+			dependencies = ();
+			name = TildeQuickLookExtension;
+			packageProductDependencies = (900000000000000000000002 /* TildeQuickLook */, );
+			productName = TildeQuickLook;
+			productReference = 200000000000000000000008 /* TildeQuickLook.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		600000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					700000000000000000000001 = {CreatedOnToolsVersion = 16.4; };
+					700000000000000000000002 = {CreatedOnToolsVersion = 16.4; };
+				};
+			};
+			buildConfigurationList = 800000000000000000000001 /* Build configuration list for PBXProject "TildeHost" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base, );
+			mainGroup = 400000000000000000000001;
+			packageReferences = (900000000000000000000003 /* XCLocalSwiftPackageReference ".." */, );
+			productRefGroup = 400000000000000000000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (700000000000000000000001 /* TildeHost */, 700000000000000000000002 /* TildeQuickLookExtension */, );
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		300000000000000000000002 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000001 /* main.swift in Sources */, ); runOnlyForDeploymentPostprocessing = 0; };
+		300000000000000000000004 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000003 /* ExtensionPreviewProvider.swift in Sources */, ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+		300000000000000000000006 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000006 /* AppIcon.icns in Resources */, ); runOnlyForDeploymentPostprocessing = 0; };
+		300000000000000000000007 /* QuickLook Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (100000000000000000000007 /* AppIcon.icns in QuickLook Resources */, ); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A10000000000000000000001 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = 700000000000000000000002 /* TildeQuickLookExtension */; targetProxy = A00000000000000000000001 /* PBXContainerItemProxy */; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		B00000000000000000000001 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; MACOSX_DEPLOYMENT_TARGET = 15.0; ONLY_ACTIVE_ARCH = YES; SDKROOT = macosx; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; SWIFT_VERSION = 6.0; }; name = Debug; };
+		B00000000000000000000002 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; MACOSX_DEPLOYMENT_TARGET = 15.0; SDKROOT = macosx; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_VERSION = 6.0; }; name = Release; };
+		B00000000000000000000003 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = App/Tilde.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; ENABLE_APP_SANDBOX = YES; ENABLE_DEBUG_DYLIB = NO; ENABLE_HARDENED_RUNTIME = YES; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = App/Info.plist; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", ); MARKETING_VERSION = 0.1.0; PRODUCT_BUNDLE_IDENTIFIER = dev.tilde.editor; PRODUCT_NAME = Tilde; SWIFT_STRICT_CONCURRENCY = complete; SWIFT_VERSION = 6.0; }; name = Debug; };
+		B00000000000000000000004 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = App/Tilde.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; ENABLE_APP_SANDBOX = YES; ENABLE_HARDENED_RUNTIME = YES; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = App/Info.plist; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", ); MARKETING_VERSION = 0.1.0; PRODUCT_BUNDLE_IDENTIFIER = dev.tilde.editor; PRODUCT_NAME = Tilde; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_STRICT_CONCURRENCY = complete; SWIFT_VERSION = 6.0; }; name = Release; };
+		B00000000000000000000005 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = QuickLook/TildeQuickLook.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; ENABLE_APP_SANDBOX = YES; ENABLE_DEBUG_DYLIB = NO; ENABLE_HARDENED_RUNTIME = YES; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = QuickLook/Info.plist; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks", ); MARKETING_VERSION = 0.1.0; PRODUCT_BUNDLE_IDENTIFIER = dev.tilde.editor.quicklook; PRODUCT_MODULE_NAME = TildeQuickLookExtension; PRODUCT_NAME = TildeQuickLook; SKIP_INSTALL = YES; SWIFT_STRICT_CONCURRENCY = complete; SWIFT_VERSION = 6.0; }; name = Debug; };
+		B00000000000000000000006 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = QuickLook/TildeQuickLook.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; ENABLE_APP_SANDBOX = YES; ENABLE_HARDENED_RUNTIME = YES; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = QuickLook/Info.plist; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks", ); MARKETING_VERSION = 0.1.0; PRODUCT_BUNDLE_IDENTIFIER = dev.tilde.editor.quicklook; PRODUCT_MODULE_NAME = TildeQuickLookExtension; PRODUCT_NAME = TildeQuickLook; SKIP_INSTALL = YES; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_STRICT_CONCURRENCY = complete; SWIFT_VERSION = 6.0; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		800000000000000000000001 /* Build configuration list for PBXProject "TildeHost" */ = {isa = XCConfigurationList; buildConfigurations = (B00000000000000000000001 /* Debug */, B00000000000000000000002 /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		800000000000000000000002 /* Build configuration list for PBXNativeTarget "TildeHost" */ = {isa = XCConfigurationList; buildConfigurations = (B00000000000000000000003 /* Debug */, B00000000000000000000004 /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		800000000000000000000003 /* Build configuration list for PBXNativeTarget "TildeQuickLook" */ = {isa = XCConfigurationList; buildConfigurations = (B00000000000000000000005 /* Debug */, B00000000000000000000006 /* Release */, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		900000000000000000000003 /* XCLocalSwiftPackageReference ".." */ = {isa = XCLocalSwiftPackageReference; relativePath = ..; };
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		900000000000000000000001 /* TildeApplication */ = {isa = XCSwiftPackageProductDependency; package = 900000000000000000000003 /* XCLocalSwiftPackageReference ".." */; productName = TildeApplication; };
+		900000000000000000000002 /* TildeQuickLook */ = {isa = XCSwiftPackageProductDependency; package = 900000000000000000000003 /* XCLocalSwiftPackageReference ".." */; productName = TildeQuickLook; };
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 600000000000000000000001 /* Project object */;
+}

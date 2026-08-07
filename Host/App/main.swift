@@ -1,0 +1,3 @@
+import TildeApplication
+
+TildeApplicationLauncher.run()

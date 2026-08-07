@@ -1,0 +1,44 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Tilde}",
+            "name": "Debug Tilde",
+            "target": "Tilde",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug Tilde"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Tilde}",
+            "name": "Release Tilde",
+            "target": "Tilde",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release Tilde"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Tilde}",
+            "name": "Debug TildeBenchmark",
+            "target": "TildeBenchmark",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug TildeBenchmark"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Tilde}",
+            "name": "Release TildeBenchmark",
+            "target": "TildeBenchmark",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release TildeBenchmark"
+        }
+    ]
+}
