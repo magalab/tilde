@@ -1,49 +1,76 @@
-name: Build
+name: CI
 
 on:
-  push:
-    tags:
-      - '*'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'Sources/**'
+      - 'Host/**'
+      - 'Tests/**'
+      - 'scripts/**'
+      - 'Package.swift'
+      - '**/Package.resolved'
+      - '.github/workflows/build.yml'
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 concurrency:
-  group: build-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  macos:
-    name: SwiftPM and macOS host
+  build-and-lint:
     runs-on: macos-15
     timeout-minutes: 30
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - name: Show toolchain versions
+      - name: Toolchain info
         run: |
-          swift --version
           xcodebuild -version
+          xcrun swift --version
 
-      - name: Resolve SwiftPM dependencies
-        run: swift package resolve
+      - name: Quick validation
+        run: |
+          xcrun swift package describe > /dev/null
+          echo "✓ Package.swift valid"
 
-      - name: Test and build app bundle
-        run: scripts/verify-host.sh Release
+      - name: Check formatting hygiene
+        run: |
+          set -euo pipefail
+          echo "Checking trailing whitespace..."
+          if grep -RInE "[[:blank:]]+$" Sources/ Host/ Package.swift scripts/ .github/workflows/build.yml; then
+            echo "Error: trailing whitespace found"
+            exit 1
+          fi
 
-      - name: Package app artifact
-        run: >-
-          ditto -c -k --sequesterRsrc --keepParent
-          .build/HostDerivedData/Build/Products/Release/Tilde.app
-          .build/Tilde-macos-ci.zip
+          echo "Checking tab indentation in Swift files..."
+          if rg -n "^\t+" Sources/ Host/ --glob '*.swift'; then
+            echo "Error: tab indentation found in Swift source"
+            exit 1
+          fi
 
-      - name: Upload app artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Tilde-macos-${{ github.sha }}
-          path: .build/Tilde-macos-ci.zip
-          if-no-files-found: error
-          retention-days: 14
+      - name: Check for TODO comments
+        run: |
+          set -euo pipefail
+          echo "Checking for TODO/FIXME comments..."
+          if grep -RInE "TODO|FIXME" Sources/ Host/; then
+            echo "Error: TODO/FIXME comments found"
+            exit 1
+          fi
+
+      - name: Build Debug and capture warnings
+        run: |
+          set -euo pipefail
+          BUILD_LOG="$(mktemp)"
+          xcrun swift build 2>&1 | tee "$BUILD_LOG"
+          if grep -i "warning:" "$BUILD_LOG"; then
+            echo "Error: compilation warnings found"
+            exit 1
+          fi
+
+      - name: Test
+        run: xcrun swift test
+
+      - name: Build Release
+        run: xcrun swift build -c release

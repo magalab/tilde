@@ -29,9 +29,21 @@ sips -z 512 512 "$SOURCE_LOGO" --out "$ICON_SET_DIR/icon_256x256@2x.png" >/dev/n
 sips -z 512 512 "$SOURCE_LOGO" --out "$ICON_SET_DIR/icon_512x512.png" >/dev/null
 sips -z 1024 1024 "$SOURCE_LOGO" --out "$ICON_SET_DIR/icon_512x512@2x.png" >/dev/null
 
-# iconutil requires RGBA PNGs. The generated source can be opaque RGB, so
-# redraw each size into an explicit alpha bitmap before assembling the ICNS.
-swift -e 'import AppKit; import Foundation; for path in CommandLine.arguments.dropFirst() { let url = URL(fileURLWithPath: path); let image = NSImage(contentsOf: url)!; let size = image.size; let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width), pixelsHigh: Int(size.height), bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: NSColorSpaceName.deviceRGB, bitmapFormat: [], bytesPerRow: 0, bitsPerPixel: 0)!; NSGraphicsContext.saveGraphicsState(); let context = NSGraphicsContext(bitmapImageRep: rep)!; NSGraphicsContext.current = context; image.draw(in: NSRect(origin: .zero, size: size), from: .zero, operation: .copy, fraction: 1); context.flushGraphics(); NSGraphicsContext.restoreGraphicsState(); let data = rep.representation(using: NSBitmapImageRep.FileType.png, properties: [:])!; try! data.write(to: url) }' "$ICON_SET_DIR"/*.png
+validate_rgba_png() {
+    local path="$1"
+    local metadata
+    metadata="$(sips -g format -g hasAlpha "$path")"
+    if [[ "$metadata" != *"format: png"* || "$metadata" != *"hasAlpha: yes"* ]]; then
+        echo "Error: expected an RGBA PNG: $path" >&2
+        exit 1
+    fi
+}
+
+validate_rgba_png "$SOURCE_LOGO"
+
+for icon in "$ICON_SET_DIR"/*.png; do
+    validate_rgba_png "$icon"
+done
 
 iconutil -c icns "$ICON_SET_DIR" -o "$OUTPUT_ICNS"
 echo "Created $OUTPUT_ICNS"

@@ -70,7 +70,8 @@
 "Show All" = "Show All";
 "Quit Tilde" = "Quit Tilde";
 "File" = "File";
-"New" = "New";
+"New Tab" = "New Tab";
+"New Window" = "New Window";
 "Open…" = "Open…";
 "Close" = "Close";
 "Save" = "Save";

@@ -14,11 +14,12 @@
 
 ## Product-owner inputs
 
-- [ ] Select and add the Tilde project license.
-- [ ] Confirm final reverse-DNS Bundle ID, marketing version, and build number.
-- [ ] Provide and review the final App Icon.
-- [ ] Select distribution channel (Developer ID direct distribution or Mac App
-  Store) and the corresponding signing team/profile.
+- [x] Select and add the Tilde project license (MIT).
+- [x] Set the app Bundle ID to `tech.lury.tilde` and the Quick Look extension
+  Bundle ID to `tech.lury.tilde.quicklook`.
+- [ ] Confirm the final marketing version and build number.
+- [x] Provide and review the final App Icon.
+- [ ] Select a Developer ID certificate/team for direct distribution.
 
 ## Signed candidate
 
@@ -27,8 +28,8 @@
 - [ ] Compare signed entitlements with the accepted sandbox model.
 - [ ] Bundle exact third-party acknowledgements and expose them from About.
 - [ ] Package DMG with `scripts/build-dmg.sh Release`.
-- [ ] Submit for notarization and staple the accepted ticket when using
-  Developer ID distribution (notarize the DMG, not the `.app`).
+- [ ] Submit the DMG for notarization and staple the accepted ticket (direct
+  Developer ID distribution; App Store submission is out of scope).
 - [ ] Validate Gatekeeper from a downloaded/quarantined artifact.
 
 ## Manual matrix

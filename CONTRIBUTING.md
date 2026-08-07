@@ -75,7 +75,7 @@ use imperative subjects, for example `Preserve selection after external reload`.
 
 ## Distribution notes
 
-The Tilde project license is intentionally still pending. Do not publish source
-or binaries until a project `LICENSE` is selected and the exact third-party
-license texts and notices described in
-[`docs/dependency-licenses.md`](docs/dependency-licenses.md) are bundled.
+The project source is released under the [MIT License](LICENSE). Third-party
+dependencies retain their own licenses; keep the notices described in
+[`docs/dependency-licenses.md`](docs/dependency-licenses.md) with distributed
+artifacts.

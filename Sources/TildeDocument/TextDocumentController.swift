@@ -34,6 +34,20 @@ public final class TextDocumentController: NSDocumentController {
         return document
     }
 
+    public func newDocumentInSeparateWindow() {
+        do {
+            let document = try makeUntitledDocument(ofType: defaultType ?? TildeDocumentType.plainText)
+            addDocument(document)
+            document.makeWindowControllers()
+            document.windowControllers.forEach { controller in
+                controller.window?.tabbingMode = .disallowed
+            }
+            document.showWindows()
+        } catch {
+            NSApp.presentError(error)
+        }
+    }
+
     public override func openDocument(
         withContentsOf url: URL,
         display displayDocument: Bool,

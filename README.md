@@ -65,6 +65,13 @@ scripts/build-dmg.sh Release
 The generated DMG is intentionally ignored by Git. Release signing,
 notarization, and clean-machine validation are tracked in the release checklist.
 
+To install the latest release with Homebrew:
+
+```sh
+brew tap magalab/homebrew-tap
+brew install --cask tilde
+```
+
 ## Design and release evidence
 
 - [SPM-first ADR](docs/adr/0001-spm-first.md)
@@ -74,6 +81,6 @@ notarization, and clean-machine validation are tracked in the release checklist.
 - [Dependency license audit](docs/dependency-licenses.md)
 - [Release checklist](docs/release-checklist.md)
 
-The project license has not yet been selected. Do not distribute source or
-binaries until the repository owner adds a project `LICENSE` and the required
-third-party notices to the final app.
+The project is licensed under the [MIT License](LICENSE). Third-party
+dependencies remain subject to their own licenses; see
+[the dependency license audit](docs/dependency-licenses.md).

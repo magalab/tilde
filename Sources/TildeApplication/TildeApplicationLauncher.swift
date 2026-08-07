@@ -42,6 +42,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         true
     }
 
+    @objc func newDocumentInNewWindow(_ sender: Any?) {
+        documentController.newDocumentInSeparateWindow()
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         if let fontSizeKeyMonitor {
             NSEvent.removeMonitor(fontSizeKeyMonitor)

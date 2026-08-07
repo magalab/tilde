@@ -43,7 +43,7 @@ public struct MarkdownPreviewView: View {
                     .textual.imageAttachmentLoader(
                         SecureAttachmentLoader(documentURL: snapshot.fileURL, policy: policy)
                     )
-                    .frame(maxWidth: 860, alignment: .leading)
+                    .frame(maxWidth: 960, alignment: .leading)
                     .padding(.horizontal, 28)
                     .padding(.vertical, 24)
                     .frame(maxWidth: .infinity, alignment: .center)

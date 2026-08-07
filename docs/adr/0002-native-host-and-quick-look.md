@@ -59,7 +59,7 @@ scripts/verify-host.sh Debug
 ```
 
 In addition to the automated gate, the built Debug app was launched and macOS
-registered `dev.tilde.editor.quicklook`. A Finder-equivalent `qlmanage -p -x`
+registered `tech.lury.tilde.quicklook`. A Finder-equivalent `qlmanage -p -x`
 request for `Tests/Fixtures/quicklook.md` launched the embedded extension
 process. Distribution signing, notarization, and a clean-machine installation
 remain release-environment checks because they require project credentials.

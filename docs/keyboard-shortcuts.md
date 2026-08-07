@@ -2,7 +2,8 @@
 
 | Action | Shortcut |
 |---|---|
-| New document | Command-N |
+| New tab | Command-N |
+| New window | Shift-Command-N |
 | Open | Command-O |
 | Close window | Command-W |
 | Save | Command-S |

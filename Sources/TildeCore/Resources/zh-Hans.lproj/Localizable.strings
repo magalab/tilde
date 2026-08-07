@@ -70,7 +70,8 @@
 "Show All" = "全部显示";
 "Quit Tilde" = "退出 Tilde";
 "File" = "文件";
-"New" = "新建";
+"New Tab" = "新建标签页";
+"New Window" = "新建窗口";
 "Open…" = "打开…";
 "Close" = "关闭";
 "Save" = "保存";

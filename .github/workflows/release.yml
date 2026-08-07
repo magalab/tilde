@@ -1,0 +1,155 @@
+name: Release DMG
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build arm64 DMG
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Toolchain info
+        run: |
+          xcodebuild -version
+          xcrun swift --version
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="dev-${GITHUB_SHA::7}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build DMG
+        run: VERSION="${{ steps.version.outputs.version }}" bash scripts/build-dmg.sh
+
+      - name: List artifacts
+        run: ls -lh dist/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: tilde-macos-${{ steps.version.outputs.version }}-arm64
+          path: dist/*.dmg
+          retention-days: 30
+
+  release:
+    name: Publish GitHub Release
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -lh artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: artifacts/*.dmg
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  homebrew:
+    name: Update Homebrew Tap
+    if: github.ref_type == 'tag'
+    needs: release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p release-assets
+          version="${GITHUB_REF_NAME#v}"
+          asset="Tilde_${version}_arm64.dmg"
+          gh release download "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pattern "${asset}" \
+            --dir release-assets
+          if [ ! -f "release-assets/${asset}" ]; then
+            echo "Missing release asset: ${asset}"
+            ls -lh release-assets
+            exit 1
+          fi
+
+      - name: Compute checksum
+        id: checksum
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          asset="release-assets/Tilde_${version}_arm64.dmg"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "arm64=$(sha256sum "${asset}" | awk '{print $1}')" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout tap
+        uses: actions/checkout@v7
+        with:
+          repository: magalab/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Update cask
+        shell: bash
+        run: |
+          mkdir -p tap/Casks
+          cat > tap/Casks/tilde.rb <<'RUBY'
+          cask "tilde" do
+            version "__VERSION__"
+            sha256 "__ARM64_SHA256__"
+
+            url "https://github.com/${{ github.repository }}/releases/download/__TAG__/Tilde_#{version}_arm64.dmg"
+            name "Tilde"
+            desc "Native macOS text editor for plain text and Markdown"
+            homepage "https://github.com/${{ github.repository }}"
+
+            depends_on macos: :sequoia
+
+            app "Tilde.app"
+          end
+          RUBY
+
+          sed -i \
+            -e "s/__VERSION__/${{ steps.checksum.outputs.version }}/g" \
+            -e "s/__TAG__/${GITHUB_REF_NAME}/g" \
+            -e "s/__ARM64_SHA256__/${{ steps.checksum.outputs.arm64 }}/g" \
+            tap/Casks/tilde.rb
+
+      - name: Commit cask
+        working-directory: tap
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/tilde.rb
+          if git diff --cached --quiet; then
+            echo "Cask already up to date"
+            exit 0
+          fi
+          git commit -m "tilde ${GITHUB_REF_NAME}"
+          git push

@@ -42,8 +42,15 @@ enum MainMenuBuilder {
     ) -> NSMenuItem {
         let root = NSMenuItem()
         let menu = NSMenu(title: L10n.string("File"))
-        let new = menu.addItem(withTitle: L10n.string("New"), action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n")
+        let new = menu.addItem(withTitle: L10n.string("New Tab"), action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n")
         new.target = documentController
+        let newWindow = menu.addItem(
+            withTitle: L10n.string("New Window"),
+            action: #selector(AppDelegate.newDocumentInNewWindow(_:)),
+            keyEquivalent: "N"
+        )
+        newWindow.keyEquivalentModifierMask = [.command, .shift]
+        newWindow.target = actionTarget
         let open = menu.addItem(withTitle: L10n.string("Open…"), action: #selector(NSDocumentController.openDocument(_:)), keyEquivalent: "o")
         open.target = documentController
         menu.addItem(.separator())
