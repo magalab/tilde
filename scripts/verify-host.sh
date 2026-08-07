@@ -44,6 +44,12 @@ readonly SUPPORTED_TYPES="$(
 )"
 test "${SUPPORTED_TYPES}" = '["net.daringfireball.markdown"]'
 
+readonly DATA_BASED_PREVIEW="$(
+  plutil -extract NSExtension.NSExtensionAttributes.QLIsDataBasedPreview \
+    raw -o - "${EXTENSION_PLIST}"
+)"
+test "${DATA_BASED_PREVIEW}" = "true"
+
 readonly APP_IDENTIFIER="$(plutil -extract CFBundleIdentifier raw -o - "${APP_PATH}/Contents/Info.plist")"
 readonly EXTENSION_IDENTIFIER="$(plutil -extract CFBundleIdentifier raw -o - "${EXTENSION_PLIST}")"
 test "${EXTENSION_IDENTIFIER}" = "${APP_IDENTIFIER}.quicklook"
