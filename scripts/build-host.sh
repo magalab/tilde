@@ -24,6 +24,7 @@ xcodebuild \
   -scheme TildeHost \
   -configuration "${CONFIGURATION}" \
   -derivedDataPath "${DERIVED_DATA_PATH}" \
+  ARCHS=arm64 \
   CODE_SIGN_IDENTITY="${SIGNING_IDENTITY}" \
   build
 

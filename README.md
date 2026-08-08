@@ -56,6 +56,14 @@ The verified app is written to
 signed. Distribution builds require the project's Developer ID identity and
 notarization credentials.
 
+The host packaging configuration currently targets Apple Silicon (`arm64`)
+only. This is intentional for the current development and release setup:
+Tilde does not currently produce an Intel or Universal binary. The architecture
+is constrained both by `Host/TildeHost.xcodeproj` and by
+`scripts/build-host.sh`; both locations must be updated together if Intel or
+Universal support is added. Such a change also requires validating all pinned
+SwiftPM dependencies and the signed Release artifact on both architectures.
+
 To create a local DMG from a verified build:
 
 ```sh

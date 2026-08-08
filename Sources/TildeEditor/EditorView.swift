@@ -121,6 +121,7 @@ public struct EditorView: NSViewRepresentable {
         let wrap = settings.wordWrap && document.largeFileDisposition == .standard
         textView.indentStyle = settings.indentStyle
         textView.tabWidth = settings.tabWidth
+        textView.markdownEditingEnabled = document.metadata.documentType == TildeDocumentType.markdown
         textView.isHorizontallyResizable = !wrap
         textView.autoresizingMask = wrap ? [.width] : []
         scrollView.hasHorizontalScroller = !wrap

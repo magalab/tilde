@@ -5,6 +5,21 @@ import TildeCore
 public final class EditorTextView: NSTextView {
     public var indentStyle: IndentStyle = .spaces
     public var tabWidth = 2
+    public var markdownEditingEnabled = false
+
+    public override func insertNewline(_ sender: Any?) {
+        guard selectedRange().length == 0,
+              markdownEditingEnabled,
+              let edit = MarkdownEditingTransformer.newlineEdit(
+                in: string,
+                cursor: selectedRange().location
+              )
+        else {
+            super.insertNewline(sender)
+            return
+        }
+        insertText(edit.replacement, replacementRange: edit.range)
+    }
 
     public override func insertTab(_ sender: Any?) {
         if selectedRange().length > 0 {

@@ -17,7 +17,7 @@
 | Find Next / Previous | Command-G / Shift-Command-G |
 | Indent / Outdent selection | Command-] / Command-[ |
 | Go to Line | Control-Command-L |
-| Toggle Markdown preview | Shift-Command-P |
+| Toggle Markdown preview / split view | Shift-Command-P |
 | Increase / decrease editor font | Command-+ or Command-= / Command-- |
 | Reset editor font size | Command-0 |
 | Enter Full Screen | Control-Command-F |

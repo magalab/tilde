@@ -15,7 +15,13 @@ struct DocumentRootView: View {
     init(document: TextDocument, settings: EditorSettings) {
         self.document = document
         self.settings = settings
-        _session = State(initialValue: EditorSession())
+        let restoredSession = EditorSession(documentURL: document.fileURL)
+        if document.metadata.documentType != TildeDocumentType.markdown
+            || !document.isMarkdownPreviewAllowed
+        {
+            restoredSession.mode = .edit
+        }
+        _session = State(initialValue: restoredSession)
         _previewSnapshot = State(initialValue: nil)
     }
 
@@ -39,12 +45,13 @@ struct DocumentRootView: View {
         }
         .frame(minWidth: 520, minHeight: 360)
         .onExitCommand {
-            if session.mode == .preview {
+            if session.mode != .edit {
                 session.mode = .edit
             }
         }
         .onChange(of: session.mode) { _, mode in
-            if mode == .preview {
+            session.schedulePersist()
+            if mode != .edit {
                 if document.isMarkdownPreviewAllowed {
                     previewSnapshot = document.makeSnapshot()
                 } else {
@@ -53,7 +60,7 @@ struct DocumentRootView: View {
             }
         }
         .onChange(of: document.revision) { _, _ in
-            if session.mode == .preview {
+            if session.mode != .edit {
                 if document.isMarkdownPreviewAllowed {
                     previewSnapshot = document.makeSnapshot()
                 } else {
@@ -68,12 +75,15 @@ struct DocumentRootView: View {
                 object: document
             )
         ) { _ in
-            if session.mode == .preview {
+            if session.mode != .edit {
                 session.mode = .edit
             } else if document.isMarkdownPreviewAllowed {
-                session.mode = .preview
+                session.mode = .split
             }
         }
+        .onChange(of: session.selection) { _, _ in session.schedulePersist() }
+        .onChange(of: session.scrollPosition) { _, _ in session.schedulePersist() }
+        .onDisappear { session.persist() }
     }
 
     private var externalChangeBanner: some View {
@@ -211,11 +221,13 @@ struct DocumentRootView: View {
                 Text(L10n.string("Preview"))
                     .tag(DocumentViewMode.preview)
                     .disabled(!document.isMarkdownPreviewAllowed)
+                Text(L10n.string("Split"))
+                    .tag(DocumentViewMode.split)
+                    .disabled(!document.isMarkdownPreviewAllowed)
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(width: 150)
-            .keyboardShortcut("p", modifiers: [.command, .shift])
+            .frame(width: 220)
         }
         .padding(.horizontal, 10)
         .frame(height: 34)
@@ -228,17 +240,29 @@ struct DocumentRootView: View {
         case .edit:
             EditorView(document: document, session: session, settings: settings)
         case .preview:
-            if let previewSnapshot {
-                MarkdownPreviewView(
-                    snapshot: previewSnapshot,
-                    model: previewModel,
-                    scrollPosition: $session.previewScrollPosition
-                )
-                .preferredColorScheme(previewColorScheme)
-            } else {
-                ProgressView()
-                    .onAppear { previewSnapshot = document.makeSnapshot() }
+            previewContent
+        case .split:
+            HSplitView {
+                EditorView(document: document, session: session, settings: settings)
+                    .frame(minWidth: 260)
+                previewContent
+                    .frame(minWidth: 260)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var previewContent: some View {
+        if let previewSnapshot {
+            MarkdownPreviewView(
+                snapshot: previewSnapshot,
+                model: previewModel,
+                scrollPosition: $session.previewScrollPosition
+            )
+            .preferredColorScheme(previewColorScheme)
+        } else {
+            ProgressView()
+                .onAppear { previewSnapshot = document.makeSnapshot() }
         }
     }
 

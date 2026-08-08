@@ -11,6 +11,8 @@
 - [x] Quick Look registers only `net.daringfireball.markdown`.
 - [x] 10 KiB–100 MiB performance matrix and SLOs are recorded.
 - [x] Dependency pins and license families are audited.
+- [x] Release architecture is documented: the current artifact target is
+  Apple Silicon (`arm64`) only; Intel and Universal artifacts are out of scope.
 
 ## Product-owner inputs
 
