@@ -26,6 +26,9 @@ struct DocumentRootView: View {
     }
 
     var body: some View {
+        // NSViewRepresentable observes settings through the parent view. Its updateNSView
+        // method alone is not part of SwiftUI's observation tracking.
+        let settingsPresentationState = EditorPresentationState(settings: settings)
         VStack(spacing: 0) {
             if document.externalChangeState != .unchanged {
                 externalChangeBanner
@@ -84,6 +87,7 @@ struct DocumentRootView: View {
         .onChange(of: session.selection) { _, _ in session.schedulePersist() }
         .onChange(of: session.scrollPosition) { _, _ in session.schedulePersist() }
         .onDisappear { session.persist() }
+        .onChange(of: settingsPresentationState) { _, _ in }
     }
 
     private var externalChangeBanner: some View {

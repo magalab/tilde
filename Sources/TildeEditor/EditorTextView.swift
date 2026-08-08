@@ -6,6 +6,16 @@ public final class EditorTextView: NSTextView {
     public var indentStyle: IndentStyle = .spaces
     public var tabWidth = 2
     public var markdownEditingEnabled = false
+    public var magnificationHandler: (@MainActor (CGFloat) -> Void)?
+    public var smartMagnificationHandler: (@MainActor () -> Void)?
+
+    public override func magnify(with event: NSEvent) {
+        magnificationHandler?(event.magnification)
+    }
+
+    public override func smartMagnify(with event: NSEvent) {
+        smartMagnificationHandler?()
+    }
 
     public override func insertNewline(_ sender: Any?) {
         guard selectedRange().length == 0,

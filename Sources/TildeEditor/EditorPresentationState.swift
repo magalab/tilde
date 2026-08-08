@@ -1,16 +1,16 @@
 import Foundation
 
-struct EditorPresentationState: Equatable {
-    let fontSize: Double
-    let fontChoice: EditorFontChoice
-    let fontLigatures: Bool
-    let wordWrap: Bool
-    let showLineNumbers: Bool
-    let tabWidth: Int
-    let indentStyle: IndentStyle
+public struct EditorPresentationState: Equatable, Sendable {
+    public let fontSize: Double
+    public let fontChoice: EditorFontChoice
+    public let fontLigatures: Bool
+    public let wordWrap: Bool
+    public let showLineNumbers: Bool
+    public let tabWidth: Int
+    public let indentStyle: IndentStyle
 
     @MainActor
-    init(settings: EditorSettings) {
+    public init(settings: EditorSettings) {
         fontSize = settings.fontSize
         fontChoice = settings.fontChoice
         fontLigatures = settings.fontLigatures

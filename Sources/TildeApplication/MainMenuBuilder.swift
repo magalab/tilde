@@ -200,18 +200,21 @@ enum MainMenuBuilder {
             keyEquivalent: "+"
         )
         bigger.target = actionTarget
+        bigger.keyEquivalentModifierMask = [.command]
         let smaller = fontMenu.addItem(
             withTitle: L10n.string("Smaller"),
             action: #selector(AppDelegate.decreaseEditorFontSize(_:)),
             keyEquivalent: "-"
         )
         smaller.target = actionTarget
+        smaller.keyEquivalentModifierMask = [.command]
         let reset = fontMenu.addItem(
             withTitle: L10n.string("Reset Size"),
             action: #selector(AppDelegate.resetEditorFontSize(_:)),
             keyEquivalent: "0"
         )
         reset.target = actionTarget
+        reset.keyEquivalentModifierMask = [.command]
         fontMenu.addItem(.separator())
         let ligatures = fontMenu.addItem(
             withTitle: L10n.string("Ligatures"),

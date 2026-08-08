@@ -31,7 +31,7 @@ public struct EditorView: NSViewRepresentable {
         document.textStorage.addLayoutManager(layoutManager)
 
         let textView = EditorTextView(frame: .zero, textContainer: textContainer)
-        configure(textView, coordinator: context.coordinator)
+        configure(textView, coordinator: context.coordinator, settings: settings)
 
         let scrollView = NSScrollView()
         scrollView.borderType = .noBorder
@@ -85,7 +85,11 @@ public struct EditorView: NSViewRepresentable {
         coordinator.document.textStorage.removeLayoutManager(layoutManager)
     }
 
-    private func configure(_ textView: EditorTextView, coordinator: EditorCoordinator) {
+    private func configure(
+        _ textView: EditorTextView,
+        coordinator: EditorCoordinator,
+        settings: EditorSettings
+    ) {
         textView.delegate = coordinator
         textView.isRichText = false
         textView.importsGraphics = false
@@ -111,6 +115,23 @@ public struct EditorView: NSViewRepresentable {
             height: CGFloat.greatestFiniteMagnitude
         )
         textView.isVerticallyResizable = true
+
+        var smartZoomBaseFontSize: Double?
+        textView.magnificationHandler = { [weak settings] magnification in
+            guard let settings else { return }
+            let scale = max(0.1, 1 + Double(magnification))
+            settings.setFontSize(settings.fontSize * scale)
+        }
+        textView.smartMagnificationHandler = { [weak settings] in
+            guard let settings else { return }
+            if let baseFontSize = smartZoomBaseFontSize {
+                smartZoomBaseFontSize = nil
+                settings.setFontSize(baseFontSize)
+            } else {
+                smartZoomBaseFontSize = settings.fontSize
+                settings.setFontSize(settings.fontSize * 1.5)
+            }
+        }
     }
 
     private func apply(
@@ -132,6 +153,7 @@ public struct EditorView: NSViewRepresentable {
         )
 
         let font = settings.font
+        textView.font = font
         var typingAttributes = textView.typingAttributes
         typingAttributes[.font] = font
         typingAttributes[.ligature] = settings.fontLigatures ? 1 : 0
@@ -144,10 +166,11 @@ public struct EditorView: NSViewRepresentable {
             scrollView: scrollView
         )
 
-        if let layoutManager = textView.layoutManager, document.textStorage.length > 0 {
+        if let layoutManager = textView.layoutManager,
+           document.textStorage.length > 0
+        {
             let fullRange = NSRange(location: 0, length: document.textStorage.length)
-            layoutManager.removeTemporaryAttribute(.font, forCharacterRange: fullRange)
-            layoutManager.addTemporaryAttribute(.font, value: font, forCharacterRange: fullRange)
+            textView.textStorage?.addAttribute(.font, value: font, range: fullRange)
             layoutManager.removeTemporaryAttribute(.ligature, forCharacterRange: fullRange)
             layoutManager.addTemporaryAttribute(
                 .ligature,
@@ -164,7 +187,14 @@ public struct EditorView: NSViewRepresentable {
                 value: paragraphStyle,
                 forCharacterRange: fullRange
             )
+            layoutManager.invalidateLayout(
+                forCharacterRange: fullRange,
+                actualCharacterRange: nil
+            )
+            layoutManager.invalidateDisplay(forCharacterRange: fullRange)
         }
+        textView.needsLayout = true
+        textView.needsDisplay = true
     }
 
     private func configureLineNumbers(

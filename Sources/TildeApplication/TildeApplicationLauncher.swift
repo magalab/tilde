@@ -8,7 +8,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let documentController = TextDocumentController()
     let settings = EditorSettings()
     var settingsWindowController: NSWindowController?
-    private var fontSizeKeyMonitor: Any?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         documentController.newDocumentMetadataProvider = { [settings] in
@@ -27,15 +26,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             actionTarget: self
         )
         NSApp.windowsMenu = NSApp.mainMenu?.item(withTitle: L10n.string("Window"))?.submenu
-        installFontSizeKeyMonitor()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        if documentController.documents.isEmpty {
-            documentController.newDocument(nil)
-        }
     }
 
     func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool {
@@ -46,36 +41,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         documentController.newDocumentInSeparateWindow()
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
-        if let fontSizeKeyMonitor {
-            NSEvent.removeMonitor(fontSizeKeyMonitor)
-            self.fontSizeKeyMonitor = nil
-        }
-    }
-
-    private func installFontSizeKeyMonitor() {
-        fontSizeKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
-            @MainActor [weak self] event in
-            guard let self else { return event }
-            let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            guard modifiers.contains(.command),
-                  !modifiers.contains(.control),
-                  !modifiers.contains(.option),
-                  let key = event.charactersIgnoringModifiers
-            else { return event }
-
-            switch key {
-            case "=", "+":
-                self.settings.increaseFontSize()
-                return nil
-            case "-":
-                self.settings.decreaseFontSize()
-                return nil
-            default:
-                return event
-            }
-        }
-    }
 }
 
 public enum TildeApplicationLauncher {
