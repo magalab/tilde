@@ -37,6 +37,7 @@ public final class MarkdownPreviewModel {
     public private(set) var prepared: PreparedMarkdown?
     public private(set) var isRendering = false
     public private(set) var errorMessage: String?
+    public private(set) var retryToken = 0
     private var requestedRevision: UInt64?
 
     public init() {}
@@ -81,6 +82,12 @@ public final class MarkdownPreviewModel {
             prepared = nil
             errorMessage = error.localizedDescription
         }
+    }
+
+    public func retry() {
+        retryToken &+= 1
+        prepared = nil
+        errorMessage = nil
     }
 }
 

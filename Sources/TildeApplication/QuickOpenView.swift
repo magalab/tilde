@@ -19,10 +19,22 @@ struct QuickOpenView: View {
 
     private var filtered: [QuickOpenCandidate] {
         guard !query.isEmpty else { return candidates }
-        return candidates.filter {
-            $0.title.localizedCaseInsensitiveContains(query)
-                || $0.detail.localizedCaseInsensitiveContains(query)
-        }
+        return candidates
+            .compactMap { candidate -> (QuickOpenCandidate, Int)? in
+                let titleMatch = FuzzyMatcher.match(query: query, in: candidate.title)
+                let detailMatch = FuzzyMatcher.match(query: query, in: candidate.detail)
+                let scores = [
+                    titleMatch.map { $0.score + 100 },
+                    detailMatch?.score,
+                ].compactMap { $0 }
+                guard let score = scores.max() else { return nil }
+                return (candidate, score)
+            }
+            .sorted { lhs, rhs in
+                if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
+                return lhs.0.title.localizedCaseInsensitiveCompare(rhs.0.title) == .orderedAscending
+            }
+            .map(\.0)
     }
 
     var body: some View {
@@ -85,6 +97,15 @@ struct QuickOpenView: View {
                 }
             }
             .listStyle(.plain)
+            .overlay {
+                if !query.isEmpty && filtered.isEmpty {
+                    ContentUnavailableView(
+                        L10n.string("No Matching Files"),
+                        systemImage: "doc.text.magnifyingglass",
+                        description: Text(L10n.string("Try a different search."))
+                    )
+                }
+            }
             .accessibilityIdentifier("quick-open.results")
             .onMoveCommand { direction in moveSelection(direction) }
         }

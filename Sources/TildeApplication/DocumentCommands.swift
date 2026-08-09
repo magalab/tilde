@@ -108,6 +108,26 @@ extension AppDelegate {
         settings.fontLigatures.toggle()
     }
 
+    @objc func navigateBack(_ sender: Any?) {
+        currentEditorTextView()?.navigateBack(sender)
+    }
+
+    @objc func navigateForward(_ sender: Any?) {
+        currentEditorTextView()?.navigateForward(sender)
+    }
+
+    private func currentEditorTextView() -> EditorTextView? {
+        func find(in view: NSView?) -> EditorTextView? {
+            guard let view else { return nil }
+            if let editor = view as? EditorTextView { return editor }
+            for child in view.subviews {
+                if let editor = find(in: child) { return editor }
+            }
+            return nil
+        }
+        return find(in: NSApp.keyWindow?.contentView)
+    }
+
     @objc func showSettings(_ sender: Any?) {
         let targetScreen = currentDocument?.windowControllers
             .compactMap(\.window?.screen)
@@ -187,6 +207,10 @@ extension AppDelegate: NSMenuItemValidation {
             return settings.fontSize > 8
         case #selector(resetEditorFontSize(_:)):
             return settings.fontSize != 13
+        case #selector(navigateBack(_:)):
+            return currentEditorTextView()?.canNavigateBack == true
+        case #selector(navigateForward(_:)):
+            return currentEditorTextView()?.canNavigateForward == true
         case #selector(toggleFontLigatures(_:)):
             menuItem.state = settings.fontLigatures ? .on : .off
             return currentDocument != nil

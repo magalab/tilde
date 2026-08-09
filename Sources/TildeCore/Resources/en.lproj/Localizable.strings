@@ -7,6 +7,8 @@
 "Full Screen" = "Full Screen";
 "Editor" = "Editor";
 "Files" = "Files";
+"No Matching Files" = "No Matching Files";
+"Try a different search." = "Try a different search.";
 "Markdown" = "Markdown";
 "Appearance" = "Appearance";
 "Text Editing" = "Text Editing";
@@ -49,6 +51,10 @@
 "Markdown preview" = "Markdown preview";
 "Preview Unavailable" = "Preview Unavailable";
 "Rendering Markdown…" = "Rendering Markdown…";
+"Retry Preview" = "Retry Preview";
+"Remote image loading is disabled." = "Remote image loading is disabled.";
+"Unable to load remote image." = "Unable to load remote image.";
+"Unable to load image." = "Unable to load image.";
 "Markdown preview is disabled because this document exceeds the preview size limit." = "Markdown preview is disabled because this document exceeds the preview size limit.";
 "Markdown preview exceeded its output budget." = "Markdown preview exceeded its output budget.";
 "Markdown could not be rendered: %@" = "Markdown could not be rendered: %@";
@@ -98,6 +104,14 @@
 "Indent Selection" = "Indent Selection";
 "Outdent Selection" = "Outdent Selection";
 "Add Selection to Next Match" = "Add Selection to Next Match";
+"Heading 1" = "Heading 1";
+"Heading 2" = "Heading 2";
+"Heading 3" = "Heading 3";
+"Bullet List" = "Bullet List";
+"Numbered List" = "Numbered List";
+"Task List" = "Task List";
+"Quote" = "Quote";
+"Code Block" = "Code Block";
 "View" = "View";
 "Preview Markdown" = "Preview Markdown";
 "Word Wrap" = "Word Wrap";
@@ -110,6 +124,8 @@
 "Ligatures" = "Ligatures";
 "Navigation" = "Navigation";
 "Go to Line…" = "Go to Line…";
+"Back" = "Back";
+"Forward" = "Forward";
 "Quick Open" = "Quick Open";
 "Quick Open…" = "Quick Open…";
 "Command Palette" = "Command Palette";

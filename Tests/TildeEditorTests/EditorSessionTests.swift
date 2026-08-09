@@ -35,4 +35,24 @@ final class EditorSessionTests: XCTestCase {
             }
         )
     }
+
+    func testNavigationHistoryMovesBackAndForward() {
+        let session = EditorSession()
+        let first = NSRange(location: 4, length: 0)
+        let second = NSRange(location: 80, length: 0)
+        session.recordNavigationLocation(first, beforeNavigatingTo: second)
+
+        XCTAssertEqual(session.navigateBack(from: second, maximumLength: 100), first)
+        XCTAssertEqual(session.navigateForward(from: first, maximumLength: 100), second)
+    }
+
+    func testNavigationHistoryClampsLocationsToCurrentDocument() {
+        let session = EditorSession()
+        let old = NSRange(location: 80, length: 20)
+        session.recordNavigationLocation(old, beforeNavigatingTo: NSRange(location: 2, length: 0))
+        XCTAssertEqual(
+            session.navigateBack(from: NSRange(location: 2, length: 0), maximumLength: 10),
+            NSRange(location: 10, length: 0)
+        )
+    }
 }

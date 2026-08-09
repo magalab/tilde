@@ -7,6 +7,8 @@
 "Full Screen" = "全屏";
 "Editor" = "编辑器";
 "Files" = "文件";
+"No Matching Files" = "没有匹配的文件";
+"Try a different search." = "请尝试其他搜索词。";
 "Markdown" = "Markdown";
 "Appearance" = "外观";
 "Text Editing" = "文本编辑";
@@ -49,6 +51,10 @@
 "Markdown preview" = "Markdown 预览";
 "Preview Unavailable" = "无法预览";
 "Rendering Markdown…" = "正在渲染 Markdown…";
+"Retry Preview" = "重试预览";
+"Remote image loading is disabled." = "远程图片加载已禁用。";
+"Unable to load remote image." = "无法加载远程图片。";
+"Unable to load image." = "无法加载图片。";
 "Markdown preview is disabled because this document exceeds the preview size limit." = "此文档超过预览大小限制，Markdown 预览已停用。";
 "Markdown preview exceeded its output budget." = "Markdown 预览超过输出大小限制。";
 "Markdown could not be rendered: %@" = "无法渲染 Markdown：%@";
@@ -98,6 +104,14 @@
 "Indent Selection" = "增加所选内容缩进";
 "Outdent Selection" = "减少所选内容缩进";
 "Add Selection to Next Match" = "将所选内容添加到下一个匹配项";
+"Heading 1" = "一级标题";
+"Heading 2" = "二级标题";
+"Heading 3" = "三级标题";
+"Bullet List" = "无序列表";
+"Numbered List" = "有序列表";
+"Task List" = "任务列表";
+"Quote" = "引用";
+"Code Block" = "代码块";
 "View" = "显示";
 "Preview Markdown" = "预览 Markdown";
 "Word Wrap" = "自动换行";
@@ -110,6 +124,8 @@
 "Ligatures" = "字体连字";
 "Navigation" = "导航";
 "Go to Line…" = "跳转到行…";
+"Back" = "后退";
+"Forward" = "前进";
 "Quick Open" = "快速打开";
 "Quick Open…" = "快速打开…";
 "Command Palette" = "命令面板";

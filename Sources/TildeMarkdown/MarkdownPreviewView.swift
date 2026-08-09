@@ -58,17 +58,23 @@ public struct MarkdownPreviewView: View {
                 .scrollPosition($scrollPosition)
                 .accessibilityLabel(L10n.string("Markdown preview"))
             } else if let errorMessage = model.errorMessage {
-                ContentUnavailableView(
-                    L10n.string("Preview Unavailable"),
-                    systemImage: "doc.text.magnifyingglass",
-                    description: Text(errorMessage)
-                )
+                VStack(spacing: 12) {
+                    ContentUnavailableView(
+                        L10n.string("Preview Unavailable"),
+                        systemImage: "doc.text.magnifyingglass",
+                        description: Text(errorMessage)
+                    )
+                    Button(L10n.string("Retry Preview")) {
+                        model.retry()
+                    }
+                    .buttonStyle(.bordered)
+                }
             } else {
                 ProgressView(L10n.string("Rendering Markdown…"))
                     .controlSize(.small)
             }
         }
-        .task(id: snapshot.revision) {
+        .task(id: "\(snapshot.revision)-\(model.retryToken)") {
             await model.render(snapshot: snapshot, policy: policy)
         }
     }

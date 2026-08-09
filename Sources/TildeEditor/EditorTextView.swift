@@ -8,6 +8,7 @@ public final class EditorTextView: NSTextView {
     public var markdownEditingEnabled = false
     public var magnificationHandler: (@MainActor (CGFloat) -> Void)?
     public var smartMagnificationHandler: (@MainActor () -> Void)?
+    public var slashCommandHandler: (@MainActor (EditorTextView) -> Void)?
     private var rectangularSelectionAnchor: NSPoint?
 
     public override func magnify(with event: NSEvent) {
@@ -72,6 +73,16 @@ public final class EditorTextView: NSTextView {
         insertText(edit.replacement, replacementRange: edit.range)
     }
 
+    public override func insertText(_ insertString: Any, replacementRange: NSRange) {
+        super.insertText(insertString, replacementRange: replacementRange)
+        guard markdownEditingEnabled,
+              let inserted = insertString as? String,
+              inserted == "/",
+              MarkdownSlashCommandTransformer.canTrigger(in: string, cursor: selectedRange().location)
+        else { return }
+        slashCommandHandler?(self)
+    }
+
     public override func insertTab(_ sender: Any?) {
         guard !hasMarkedText() else {
             super.insertTab(sender)
@@ -122,6 +133,34 @@ public final class EditorTextView: NSTextView {
         }
         insertText(edit.replacement, replacementRange: edit.range)
         setSelectedRange(edit.selection)
+    }
+
+    @objc public func applySlashCommand(_ sender: NSMenuItem) {
+        guard let rawValue = sender.representedObject as? String,
+              let command = MarkdownSlashCommand(rawValue: rawValue),
+              let edit = MarkdownSlashCommandTransformer.edit(
+                  in: string,
+                  cursor: selectedRange().location,
+                  command: command
+              )
+        else { return }
+        insertText(edit.replacement, replacementRange: edit.range)
+    }
+
+    @objc public func navigateBack(_ sender: Any?) {
+        (delegate as? EditorCoordinator)?.navigateBack(in: self)
+    }
+
+    @objc public func navigateForward(_ sender: Any?) {
+        (delegate as? EditorCoordinator)?.navigateForward(in: self)
+    }
+
+    public var canNavigateBack: Bool {
+        (delegate as? EditorCoordinator)?.canNavigateBack == true
+    }
+
+    public var canNavigateForward: Bool {
+        (delegate as? EditorCoordinator)?.canNavigateForward == true
     }
 
     @objc public func selectNextOccurrence(_ sender: Any?) {
@@ -261,8 +300,10 @@ public final class EditorTextView: NSTextView {
             NSSound.beep()
             return
         }
-        setSelectedRange(NSRange(location: offset, length: 0))
-        scrollRangeToVisible(selectedRange())
+        let destination = NSRange(location: offset, length: 0)
+        (delegate as? EditorCoordinator)?.recordNavigationLocation(beforeNavigatingTo: destination)
+        setSelectedRange(destination)
+        scrollRangeToVisible(destination)
         window?.makeFirstResponder(self)
     }
 

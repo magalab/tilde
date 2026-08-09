@@ -112,21 +112,67 @@ struct MarkdownAttachmentLoader: AttachmentLoader {
         for url: URL,
         text: String,
         environment: ColorEnvironmentValues
-    ) async throws -> LocalImageAttachment {
+    ) async throws -> MarkdownImageAttachment {
         switch url.scheme?.lowercased() {
         case "http", "https":
             guard policy.allowsRemoteResource(url) else {
-                throw SecureAttachmentLoader.Blocked.resourceLoadingDisabled
+                return .failure(L10n.string("Remote image loading is disabled."))
             }
-            return try await RemoteImageAttachmentLoader(policy: policy).attachment(
-                for: url,
-                text: text,
-                environment: environment
-            )
+            do {
+                let image = try await RemoteImageAttachmentLoader(policy: policy).attachment(
+                    for: url,
+                    text: text,
+                    environment: environment
+                )
+                return .image(image)
+            } catch {
+                return .failure(L10n.string("Unable to load remote image."))
+            }
         default:
-            return try await local.attachment(for: url, text: text, environment: environment)
+            do {
+                return .image(try await local.attachment(for: url, text: text, environment: environment))
+            } catch {
+                return .failure(L10n.string("Unable to load image."))
+            }
         }
     }
+}
+
+enum MarkdownImageAttachment: Attachment {
+    case image(LocalImageAttachment)
+    case failure(String)
+
+    var description: String {
+        switch self {
+        case let .image(image): image.description
+        case let .failure(message): message
+        }
+    }
+
+    @MainActor
+    var body: some View {
+        switch self {
+        case let .image(image): image.body
+        case let .failure(message):
+            Label(message, systemImage: "photo.badge.exclamationmark")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .padding(10)
+                .background(.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+        }
+    }
+
+    func sizeThatFits(
+        _ proposal: ProposedViewSize,
+        in environment: TextEnvironmentValues
+    ) -> CGSize {
+        switch self {
+        case let .image(image): image.sizeThatFits(proposal, in: environment)
+        case .failure: CGSize(width: min(proposal.width ?? 320, 480), height: 42)
+        }
+    }
+
+    func pngData() -> Data? { nil }
 }
 
 private struct RemoteImageAttachmentLoader: AttachmentLoader {

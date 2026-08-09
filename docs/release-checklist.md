@@ -19,7 +19,7 @@
 - [x] Select and add the Tilde project license (MIT).
 - [x] Set the app Bundle ID to `tech.lury.tilde` and the Quick Look extension
   Bundle ID to `tech.lury.tilde.quicklook`.
-- [ ] Confirm the final marketing version and build number.
+- [x] Confirm marketing version 0.2.0 and build number 6.
 - [x] Provide and review the final App Icon.
 - [ ] Select a Developer ID certificate/team for direct distribution.
 

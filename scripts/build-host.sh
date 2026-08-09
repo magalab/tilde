@@ -47,7 +47,8 @@ codesign --force \
 codesign --force \
   --sign "${SIGNING_IDENTITY}" "${BUNDLED_CLI}"
 codesign --force \
-  --preserve-metadata=entitlements,requirements,flags,runtime \
+  --preserve-metadata=requirements,flags,runtime \
+  --entitlements "${PROJECT_ROOT}/Host/App/Tilde.entitlements" \
   --sign "${SIGNING_IDENTITY}" "${APP_PATH}"
 
 print "Built ${DERIVED_DATA_PATH}/Build/Products/${CONFIGURATION}/Tilde.app"

@@ -88,6 +88,13 @@ struct DocumentRootView: View {
         }
         .onChange(of: session.selection) { _, _ in session.schedulePersist() }
         .onChange(of: session.scrollPosition) { _, _ in session.schedulePersist() }
+        .onChange(of: session.scrollPosition.y) { _, offset in
+            guard session.mode == .split else { return }
+            // Markdown blocks are rendered at a similar vertical rhythm to the
+            // source in the first implementation. Keep the preview near the
+            // same document position without creating a scroll feedback loop.
+            session.previewScrollPosition.scrollTo(y: max(0, offset))
+        }
         .onDisappear { session.persist() }
         .onChange(of: settingsPresentationState) { _, _ in }
         .sheet(isPresented: $showingExternalDiff) {

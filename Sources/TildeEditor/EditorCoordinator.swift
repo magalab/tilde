@@ -10,6 +10,7 @@ public final class EditorCoordinator: NSObject, NSTextViewDelegate {
     private var boundsObserver: NSObjectProtocol?
     private var syntaxHighlighter: MarkdownSyntaxHighlighter?
     private var highlightedRevision: UInt64?
+    private var lastObservedRevision: UInt64?
     private var syntaxPalette = EditorThemePalette.light
     private var currentLineRange: NSRange?
     private var matchingDelimiterRanges: [NSRange] = []
@@ -47,6 +48,13 @@ public final class EditorCoordinator: NSObject, NSTextViewDelegate {
         palette: EditorThemePalette,
         edit: TextEdit? = nil
     ) {
+        if edit == nil,
+           let lastObservedRevision,
+           lastObservedRevision != document.revision
+        {
+            session.clearNavigationHistory()
+        }
+        self.lastObservedRevision = document.revision
         if syntaxPalette != palette {
             stopSyntaxHighlighting()
             syntaxPalette = palette
@@ -134,6 +142,37 @@ public final class EditorCoordinator: NSObject, NSTextViewDelegate {
             in: document.textStorage.mutableString
         )
         refreshSelectionDecorations(in: textView)
+    }
+
+    func recordNavigationLocation(beforeNavigatingTo destination: NSRange) {
+        session.recordNavigationLocation(session.selection, beforeNavigatingTo: destination)
+    }
+
+    var canNavigateBack: Bool { session.canNavigateBack }
+    var canNavigateForward: Bool { session.canNavigateForward }
+
+    func navigateBack(in textView: NSTextView) {
+        guard let destination = session.navigateBack(
+            from: textView.selectedRange(),
+            maximumLength: textView.string.utf16.count
+        ) else {
+            NSSound.beep()
+            return
+        }
+        textView.setSelectedRange(destination)
+        textView.scrollRangeToVisible(destination)
+    }
+
+    func navigateForward(in textView: NSTextView) {
+        guard let destination = session.navigateForward(
+            from: textView.selectedRange(),
+            maximumLength: textView.string.utf16.count
+        ) else {
+            NSSound.beep()
+            return
+        }
+        textView.setSelectedRange(destination)
+        textView.scrollRangeToVisible(destination)
     }
 
     func refreshSelectionDecorations(in textView: NSTextView) {

@@ -264,6 +264,20 @@ enum MainMenuBuilder {
             keyEquivalent: "l"
         )
         goToLine.keyEquivalentModifierMask = [.command, .control]
+        let back = menu.addItem(
+            withTitle: L10n.string("Back"),
+            action: #selector(AppDelegate.navigateBack(_:)),
+            keyEquivalent: "\u{F702}"
+        )
+        back.keyEquivalentModifierMask = [.command, .option]
+        back.target = NSApp.delegate
+        let forward = menu.addItem(
+            withTitle: L10n.string("Forward"),
+            action: #selector(AppDelegate.navigateForward(_:)),
+            keyEquivalent: "\u{F703}"
+        )
+        forward.keyEquivalentModifierMask = [.command, .option]
+        forward.target = NSApp.delegate
         root.submenu = menu
         return root
     }

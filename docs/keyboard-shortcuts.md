@@ -19,6 +19,7 @@
 | Add selection to next match | Command-D |
 | Rectangular selection | Option-drag |
 | Go to Line | Control-Command-L |
+| Navigate back / forward | Option-Command-Left / Option-Command-Right |
 | Toggle Markdown preview / split view | Shift-Command-P |
 | Increase / decrease editor font | Command-+ or Command-= / Command-- |
 | Reset editor font size | Command-0 |

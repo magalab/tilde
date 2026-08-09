@@ -146,6 +146,23 @@ public struct EditorView: NSViewRepresentable {
                 settings.setFontSize(settings.fontSize * 1.5)
             }
         }
+        textView.slashCommandHandler = { textView in
+            let menu = NSMenu()
+            for command in MarkdownSlashCommand.allCases {
+                let item = menu.addItem(withTitle: "/\(command.rawValue) — \(command.title)", action: #selector(EditorTextView.applySlashCommand(_:)), keyEquivalent: "")
+                item.target = textView
+                item.representedObject = command.rawValue
+            }
+            let screenRect = textView.firstRect(
+                forCharacterRange: textView.selectedRange(),
+                actualRange: nil
+            )
+            guard !screenRect.isEmpty else { return }
+            guard let window = textView.window else { return }
+            let windowPoint = window.convertPoint(fromScreen: screenRect.origin)
+            let viewPoint = textView.convert(windowPoint, from: nil)
+            menu.popUp(positioning: nil, at: viewPoint, in: textView)
+        }
     }
 
     private func apply(

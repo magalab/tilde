@@ -1,7 +1,27 @@
 # Changelog
 
-All notable changes to Tilde will be documented here. Until the first public
-release, changes are grouped under `Unreleased`.
+All notable changes to Tilde are documented here. Work not yet included in a
+tagged release is grouped under `Unreleased`.
+
+## Unreleased
+
+## 0.2.0 - 2026-08-09
+
+- Add fuzzy-ranked Quick Open results with a localized empty state.
+- Add editor navigation history with Back and Forward commands, bounded history,
+  and safe restoration after document changes.
+- Add localized Markdown slash commands for headings, lists, tasks, quotes, and
+  code blocks.
+- Improve Markdown preview recovery with retry actions, image failure
+  placeholders, and basic editor-to-preview scroll synchronization.
+- Bundle the `tilde` command-line opener inside the macOS app and Homebrew cask.
+- Preserve app entitlements and hardened-runtime signing metadata when rebuilding
+  the host bundle.
+
+## 0.1.4 - 2026-08-09
+
+- Add opt-in remote Markdown image loading with sandbox network entitlement and
+  attachment safety limits.
 
 ## 0.1.1 - 2026-08-08
 
@@ -12,7 +32,7 @@ release, changes are grouped under `Unreleased`.
 - Document the Apple Silicon-only release architecture.
 - Reduce session persistence writes and migrate legacy path-based session keys.
 
-## Unreleased
+## 0.1.0 - 2026-08-07
 
 - Initial repository snapshot for the native macOS editor.
 - SwiftPM-first package with document editing, Markdown preview, and Finder

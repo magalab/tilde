@@ -19,6 +19,9 @@ public final class EditorSession {
     public var mode: DocumentViewMode = .edit
     public var textPosition = TextPosition(line: 1, column: 1)
 
+    private var backLocations: [NSRange] = []
+    private var forwardLocations: [NSRange] = []
+
     private let persistenceKey: String?
     private let legacyPersistenceKey: String?
     private var pendingPersistence: Task<Void, Never>?
@@ -74,6 +77,44 @@ public final class EditorSession {
         if persistenceKey != legacyPersistenceKey, let legacyPersistenceKey {
             defaults.removeObject(forKey: legacyPersistenceKey)
         }
+    }
+
+    public var canNavigateBack: Bool { !backLocations.isEmpty }
+    public var canNavigateForward: Bool { !forwardLocations.isEmpty }
+
+    public func recordNavigationLocation(_ range: NSRange, beforeNavigatingTo destination: NSRange) {
+        guard range != destination else { return }
+        if backLocations.last != range {
+            backLocations.append(range)
+        }
+        if backLocations.count > 100 { backLocations.removeFirst() }
+        forwardLocations.removeAll()
+    }
+
+    public func navigateBack(from current: NSRange, maximumLength: Int) -> NSRange? {
+        guard let destination = backLocations.popLast() else { return nil }
+        let safeDestination = Self.clamped(destination, maximumLength: maximumLength)
+        forwardLocations.append(Self.clamped(current, maximumLength: maximumLength))
+        return safeDestination
+    }
+
+    public func navigateForward(from current: NSRange, maximumLength: Int) -> NSRange? {
+        guard let destination = forwardLocations.popLast() else { return nil }
+        let safeDestination = Self.clamped(destination, maximumLength: maximumLength)
+        backLocations.append(Self.clamped(current, maximumLength: maximumLength))
+        return safeDestination
+    }
+
+    public func clearNavigationHistory() {
+        backLocations.removeAll()
+        forwardLocations.removeAll()
+    }
+
+    private static func clamped(_ range: NSRange, maximumLength: Int) -> NSRange {
+        let length = max(0, maximumLength)
+        let location = min(max(0, range.location), length)
+        let safeLength = min(max(0, range.length), length - location)
+        return NSRange(location: location, length: safeLength)
     }
 
     private static func persistenceKey(for url: URL) -> String {

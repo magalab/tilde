@@ -12,6 +12,7 @@ The project requires macOS 15+, Swift 6, and Xcode with the macOS 15 SDK.
 - [Contributing and development workflow](CONTRIBUTING.md)
 - [Architecture and module boundaries](docs/architecture.md)
 - [Keyboard shortcuts](docs/keyboard-shortcuts.md)
+- [Editor experience roadmap](docs/editor-experience-roadmap.md)
 - [Release checklist](docs/release-checklist.md)
 - [Architecture decisions](docs/adr/)
 - [Performance baseline](docs/performance-baseline.md)
