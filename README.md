@@ -92,6 +92,9 @@ brew tap magalab/homebrew-tap
 brew install --cask tilde
 ```
 
+The Homebrew cask also installs the `tilde` command from inside the app bundle,
+so no separate Swift build or CLI installer is needed.
+
 ## Design and release evidence
 
 - [SPM-first ADR](docs/adr/0001-spm-first.md)

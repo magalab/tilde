@@ -131,6 +131,7 @@ jobs:
             depends_on macos: :sequoia
 
             app "Tilde.app"
+            binary "Tilde.app/Contents/MacOS/tilde"
           end
           RUBY
 

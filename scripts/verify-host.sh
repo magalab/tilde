@@ -18,6 +18,7 @@ swift test
 
 test -d "${APP_PATH}"
 test -d "${EXTENSION_PATH}"
+test -x "${APP_PATH}/Contents/MacOS/tilde"
 codesign --verify --deep --strict "${APP_PATH}"
 
 readonly APP_LOCALIZATIONS="$(
