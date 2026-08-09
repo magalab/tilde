@@ -10,7 +10,7 @@ let package = Package(
     ],
     products: [
         .executable(name: "Tilde", targets: ["TildeApp"]),
-        .executable(name: "tilde", targets: ["TildeCLI"]),
+        .executable(name: "tilde-cli", targets: ["TildeCLI"]),
         .executable(name: "TildeBenchmark", targets: ["TildeBenchmark"]),
         .library(name: "TildeCore", targets: ["TildeCore"]),
         .library(name: "TildeDocument", targets: ["TildeDocument"]),

@@ -6,6 +6,8 @@ readonly SCRIPT_DIR="${0:A:h}"
 readonly PROJECT_ROOT="${SCRIPT_DIR:h}"
 readonly CONFIGURATION="${1:-Debug}"
 readonly APP_PATH="${PROJECT_ROOT}/.build/HostDerivedData/Build/Products/${CONFIGURATION}/Tilde.app"
+readonly APP_EXECUTABLE="${APP_PATH}/Contents/MacOS/Tilde"
+readonly BUNDLED_CLI="${APP_PATH}/Contents/Helpers/tilde"
 readonly EXTENSION_PATH="${APP_PATH}/Contents/PlugIns/TildeQuickLook.appex"
 readonly EXTENSION_PLIST="${EXTENSION_PATH}/Contents/Info.plist"
 readonly APP_LOCALIZATION_BUNDLE="${APP_PATH}/Contents/Resources/Tilde_TildeCore.bundle/Contents/Resources"
@@ -18,7 +20,12 @@ swift test
 
 test -d "${APP_PATH}"
 test -d "${EXTENSION_PATH}"
-test -x "${APP_PATH}/Contents/MacOS/tilde"
+test -x "${APP_EXECUTABLE}"
+test -x "${BUNDLED_CLI}"
+test "$(stat -f '%i' "${APP_EXECUTABLE}")" != "$(stat -f '%i' "${BUNDLED_CLI}")"
+"${APP_EXECUTABLE}" --verify-resources
+readonly CLI_USAGE="$("${BUNDLED_CLI}" 2>&1 || true)"
+[[ "${CLI_USAGE}" == Usage:\ tilde* ]]
 codesign --verify --deep --strict "${APP_PATH}"
 
 readonly APP_LOCALIZATIONS="$(

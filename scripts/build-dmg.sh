@@ -6,7 +6,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONFIGURATION="${1:-Release}"
-VERSION="${VERSION:-0.2.0}"
+VERSION="${VERSION:-0.2.1}"
 TARGET_ARCH="$(uname -m)"
 DIST_DIR="$PROJECT_DIR/dist"
 APP_PATH="$PROJECT_DIR/.build/HostDerivedData/Build/Products/$CONFIGURATION/Tilde.app"

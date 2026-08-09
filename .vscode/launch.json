@@ -45,20 +45,20 @@
             "request": "launch",
             "args": [],
             "cwd": "${workspaceFolder:Tilde}",
-            "name": "Debug tilde",
-            "target": "tilde",
+            "name": "Debug tilde-cli",
+            "target": "tilde-cli",
             "configuration": "debug",
-            "preLaunchTask": "swift: Build Debug tilde"
+            "preLaunchTask": "swift: Build Debug tilde-cli"
         },
         {
             "type": "swift",
             "request": "launch",
             "args": [],
             "cwd": "${workspaceFolder:Tilde}",
-            "name": "Release tilde",
-            "target": "tilde",
+            "name": "Release tilde-cli",
+            "target": "tilde-cli",
             "configuration": "release",
-            "preLaunchTask": "swift: Build Release tilde"
+            "preLaunchTask": "swift: Build Release tilde-cli"
         }
     ]
 }

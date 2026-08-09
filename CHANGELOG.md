@@ -5,6 +5,13 @@ tagged release is grouped under `Unreleased`.
 
 ## Unreleased
 
+## 0.2.1 - 2026-08-09
+
+- Fix the packaged command-line helper overwriting the main app executable on
+  case-insensitive macOS filesystems.
+- Add release checks that launch the packaged app's resource probe and verify
+  the app and CLI helper are distinct executables.
+
 ## 0.2.0 - 2026-08-09
 
 - Add fuzzy-ranked Quick Open results with a localized empty state.

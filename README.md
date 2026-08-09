@@ -45,7 +45,7 @@ The command-line opener supports paths, line numbers, multiple files, and a
 separate window:
 
 ```sh
-swift build -c release --product tilde
+swift build -c release --product tilde-cli
 scripts/install-cli.sh
 tilde README.md:20
 ```

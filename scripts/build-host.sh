@@ -9,8 +9,8 @@ readonly DERIVED_DATA_PATH="${PROJECT_ROOT}/.build/HostDerivedData"
 readonly SIGNING_IDENTITY="${CODE_SIGN_IDENTITY:--}"
 readonly APP_PATH="${DERIVED_DATA_PATH}/Build/Products/${CONFIGURATION}/Tilde.app"
 readonly EXTENSION_PATH="${APP_PATH}/Contents/PlugIns/TildeQuickLook.appex"
-readonly CLI_BINARY="${PROJECT_ROOT}/.build/${CONFIGURATION:l}/tilde"
-readonly BUNDLED_CLI="${APP_PATH}/Contents/MacOS/tilde"
+readonly CLI_BINARY="${PROJECT_ROOT}/.build/${CONFIGURATION:l}/tilde-cli"
+readonly BUNDLED_CLI="${APP_PATH}/Contents/Helpers/tilde"
 
 cd "${PROJECT_ROOT}"
 
@@ -36,6 +36,7 @@ if [[ ! -x "${CLI_BINARY}" ]]; then
   print -u2 "Tilde CLI not found at ${CLI_BINARY}"
   exit 1
 fi
+mkdir -p "${BUNDLED_CLI:h}"
 cp "${CLI_BINARY}" "${BUNDLED_CLI}"
 chmod 755 "${BUNDLED_CLI}"
 

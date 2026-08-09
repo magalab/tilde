@@ -441,6 +441,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 public enum TildeApplicationLauncher {
+    public static func verifyResources() -> Bool {
+        !L10n.string("Editor").isEmpty
+    }
+
     @MainActor
     public static func run() {
         let application = NSApplication.shared

@@ -4,13 +4,13 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="${0:A:h}"
 readonly PROJECT_ROOT="${SCRIPT_DIR:h}"
-readonly DEFAULT_BINARY="${PROJECT_ROOT}/.build/release/tilde"
+readonly DEFAULT_BINARY="${PROJECT_ROOT}/.build/release/tilde-cli"
 readonly INSTALL_DIR="${HOME}/.local/bin"
 readonly INSTALL_PATH="${INSTALL_DIR}/tilde"
 
 CLI_SOURCE="${TILDE_CLI_PATH:-${DEFAULT_BINARY}}"
 if [[ ! -x "${CLI_SOURCE}" ]]; then
-    print -u2 "Tilde CLI not found at ${CLI_SOURCE}. Build it with: swift build -c release --product tilde"
+    print -u2 "Tilde CLI not found at ${CLI_SOURCE}. Build it with: swift build -c release --product tilde-cli"
     exit 1
 fi
 
