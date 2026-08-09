@@ -41,6 +41,10 @@ enum EncodingMenuChoice: Int, CaseIterable {
 
 @MainActor
 extension AppDelegate {
+    @objc func showQuickOpen(_ sender: Any?) {
+        showQuickOpenWindow()
+    }
+
     @objc func toggleMarkdownPreview(_ sender: Any?) {
         guard let document = currentDocument else { return }
         NotificationCenter.default.post(name: .toggleMarkdownPreview, object: document)

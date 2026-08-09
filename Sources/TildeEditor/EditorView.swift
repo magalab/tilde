@@ -41,7 +41,11 @@ public struct EditorView: NSViewRepresentable {
         context.coordinator.observeScrollView(scrollView)
 
         apply(settings, to: textView, in: scrollView)
-        context.coordinator.refreshSyntaxHighlighting(in: textView)
+        context.coordinator.refreshSyntaxHighlighting(
+            in: textView,
+            palette: settings.editorThemePalette
+        )
+        context.coordinator.refreshSelectionDecorations(in: textView)
         context.coordinator.presentationState = EditorPresentationState(settings: settings)
         DispatchQueue.main.async { [weak textView, weak scrollView] in
             if let scrollView {
@@ -60,15 +64,25 @@ public struct EditorView: NSViewRepresentable {
             apply(settings, to: textView, in: scrollView)
             context.coordinator.presentationState = presentationState
         }
-        context.coordinator.refreshSyntaxHighlighting(in: textView)
+        context.coordinator.refreshSyntaxHighlighting(
+            in: textView,
+            palette: settings.editorThemePalette
+        )
+        context.coordinator.refreshSelectionDecorations(in: textView)
 
         let maximumLocation = document.textStorage.length
-        let requested = session.selection
-        if requested.location <= maximumLocation,
-           requested.location + requested.length <= maximumLocation,
-           textView.selectedRange() != requested
-        {
-            textView.setSelectedRange(requested)
+        let requestedRanges = session.selectedRanges.filter {
+            $0.location <= maximumLocation && $0.location + $0.length <= maximumLocation
+        }
+        if !requestedRanges.isEmpty {
+            let currentRanges = textView.selectedRanges.map(\.rangeValue)
+            if currentRanges != requestedRanges {
+                textView.setSelectedRanges(
+                    requestedRanges.map { NSValue(range: $0) },
+                    affinity: .downstream,
+                    stillSelecting: false
+                )
+            }
         }
     }
 
@@ -140,6 +154,7 @@ public struct EditorView: NSViewRepresentable {
         in scrollView: NSScrollView
     ) {
         let wrap = settings.wordWrap && document.largeFileDisposition == .standard
+        let palette = settings.editorThemePalette
         textView.indentStyle = settings.indentStyle
         textView.tabWidth = settings.tabWidth
         textView.markdownEditingEnabled = document.metadata.documentType == TildeDocumentType.markdown
@@ -153,6 +168,13 @@ public struct EditorView: NSViewRepresentable {
         )
 
         let font = settings.font
+        textView.backgroundColor = palette.background.nsColor
+        textView.textColor = palette.foreground.nsColor
+        textView.insertionPointColor = palette.foreground.nsColor
+        textView.selectedTextAttributes = [
+            .backgroundColor: palette.selection.nsColor,
+            .foregroundColor: palette.foreground.nsColor,
+        ]
         textView.font = font
         var typingAttributes = textView.typingAttributes
         typingAttributes[.font] = font
@@ -162,6 +184,7 @@ public struct EditorView: NSViewRepresentable {
         configureLineNumbers(
             settings.showLineNumbers,
             font: font,
+            palette: palette,
             textView: textView,
             scrollView: scrollView
         )
@@ -200,6 +223,7 @@ public struct EditorView: NSViewRepresentable {
     private func configureLineNumbers(
         _ visible: Bool,
         font: NSFont,
+        palette: EditorThemePalette,
         textView: NSTextView,
         scrollView: NSScrollView
     ) {
@@ -216,11 +240,12 @@ public struct EditorView: NSViewRepresentable {
             ruler = LineNumberRulerView(
                 scrollView: scrollView,
                 textView: textView,
-                document: document
+                document: document,
+                palette: palette
             )
             scrollView.verticalRulerView = ruler
         }
-        ruler.refresh(font: font)
+        ruler.refresh(font: font, palette: palette)
         scrollView.hasVerticalRuler = true
         scrollView.rulersVisible = true
     }

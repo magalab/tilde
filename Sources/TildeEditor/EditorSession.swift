@@ -13,6 +13,7 @@ public enum DocumentViewMode: String, CaseIterable, Sendable {
 @Observable
 public final class EditorSession {
     public var selection = NSRange(location: 0, length: 0)
+    public var selectedRanges: [NSRange] = [NSRange(location: 0, length: 0)]
     public var scrollPosition = CGPoint.zero
     public var previewScrollPosition = ScrollPosition()
     public var mode: DocumentViewMode = .edit
@@ -47,6 +48,7 @@ public final class EditorSession {
            let restoredMode = DocumentViewMode(rawValue: rawMode) {
             mode = restoredMode
         }
+        selectedRanges = [selection]
     }
 
     public func schedulePersist(defaults: UserDefaults = .standard) {

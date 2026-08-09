@@ -19,6 +19,7 @@ public final class TextDocument: NSDocument, @preconcurrency ObservableObject {
 
     private var loadedRevision: UInt64 = 0
     private var originalData: Data?
+    private var baselineText = ""
     private var metadataHasChanged = false
     private var isHandlingExternalChange = false
     private var pendingWrittenBaseline: SavedBaseline?
@@ -181,6 +182,21 @@ public final class TextDocument: NSDocument, @preconcurrency ObservableObject {
         )
     }
 
+    public func destinationURL(forMarkdownLink destination: String) -> URL? {
+        guard let baseURL = fileURL,
+              let parsed = URL(string: destination)
+        else { return nil }
+        if let scheme = parsed.scheme?.lowercased() {
+            guard ["http", "https", "mailto"].contains(scheme) else { return nil }
+            return parsed
+        }
+        let path = destination.split(separator: "#", maxSplits: 1).first.map(String.init) ?? destination
+        guard !path.isEmpty else { return nil }
+        return baseURL.deletingLastPathComponent()
+            .appendingPathComponent(path)
+            .standardizedFileURL
+    }
+
     public var largeFileDisposition: LargeFileDisposition {
         LargeFilePolicy.measuredBaseline.disposition(
             forByteCount: max(metadata.sourceByteCount, workingUTF8ByteCount)
@@ -203,14 +219,20 @@ public final class TextDocument: NSDocument, @preconcurrency ObservableObject {
         markdownPreviewAvailability == .available
     }
 
+    public var canModifyDocumentSettings: Bool {
+        guard externalChangeState == .unchanged else { return false }
+        guard let fileURL else { return true }
+        return FileManager.default.isWritableFile(atPath: fileURL.path)
+    }
+
     public func changeEncoding(to encoding: DetectedEncoding) {
-        guard metadata.encoding != encoding else { return }
+        guard canModifyDocumentSettings, metadata.encoding != encoding else { return }
         metadata.encoding = encoding
         noteMetadataChange()
     }
 
     public func changeLineEnding(to lineEnding: LineEnding) {
-        guard metadata.selectedLineEnding != lineEnding else { return }
+        guard canModifyDocumentSettings, metadata.selectedLineEnding != lineEnding else { return }
         metadata.selectedLineEnding = lineEnding
         noteMetadataChange()
     }
@@ -249,6 +271,32 @@ public final class TextDocument: NSDocument, @preconcurrency ObservableObject {
         }.value
         apply(decoded, typeName: typeName)
         updateChangeCount(.changeCleared)
+    }
+
+    public func externalDiskText() async throws -> String {
+        guard let fileURL else { return "" }
+        return try await Task.detached(priority: .utility) {
+            let data = try Data(contentsOf: fileURL, options: [.mappedIfSafe])
+            try Self.validateOpenByteCount(data.count)
+            return try TextDecoder.decode(data).text
+        }.value
+    }
+
+    public func externalMergeResult(with externalText: String) -> TextMergeResult {
+        TextMergeEngine.merge(
+            base: baselineText,
+            local: textStorage.string,
+            external: externalText
+        )
+    }
+
+    public func applyExternalMerge(_ result: TextMergeResult) {
+        textStorage.replaceCharacters(
+            in: NSRange(location: 0, length: textStorage.length),
+            with: result.text
+        )
+        noteTextChange(nil)
+        setExternalChangeState(.unchanged)
     }
 
     nonisolated public override func presentedItemDidChange() {
@@ -310,6 +358,7 @@ public final class TextDocument: NSDocument, @preconcurrency ObservableObject {
             sourceByteCount: decoded.originalData.count
         )
         originalData = decoded.originalData
+        baselineText = decoded.text
         workingUTF8ByteCount = decoded.text.utf8.count
         lineIndex.rebuild(for: decoded.text)
         revision &+= 1
@@ -368,6 +417,7 @@ public final class TextDocument: NSDocument, @preconcurrency ObservableObject {
         guard revision == savedRevision else { return }
         objectWillChange.send()
         originalData = data
+        baselineText = textStorage.string
         metadata.sourceByteCount = data.count
         metadata.documentType = documentType
         loadedRevision = savedRevision

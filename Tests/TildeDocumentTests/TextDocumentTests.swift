@@ -130,6 +130,24 @@ final class TextDocumentTests: XCTestCase {
         XCTAssertEqual(document.externalChangeState, .conflict)
     }
 
+    func testExternalMergeUsesLoadedBaselineAndLeavesDocumentDirty() throws {
+        let fixture = try TemporaryTextFile(contents: Data("one\ntwo\n".utf8))
+        defer { fixture.remove() }
+        let document = try makeDocument(reading: fixture.url)
+        document.textStorage.replaceCharacters(
+            in: NSRange(location: 4, length: 3),
+            with: "local"
+        )
+        document.noteTextChange()
+
+        let result = document.externalMergeResult(with: "one\ndisk\n")
+        XCTAssertTrue(result.hasConflicts)
+        document.applyExternalMerge(result)
+        XCTAssertEqual(document.textStorage.string, result.text)
+        XCTAssertTrue(document.isDocumentEdited)
+        XCTAssertEqual(document.externalChangeState, .unchanged)
+    }
+
     func testDeletedExternalFileKeepsTextAndRequiresRecovery() async throws {
         let fixture = try TemporaryTextFile(contents: Data("keep me".utf8))
         defer { fixture.remove() }

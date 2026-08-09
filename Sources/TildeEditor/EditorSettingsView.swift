@@ -1,10 +1,12 @@
+import AppKit
 import SwiftUI
 import TildeCore
 
 public struct EditorSettingsView: View {
-    public static let preferredContentSize = CGSize(width: 480, height: 430)
+    public static let preferredContentSize = CGSize(width: 480, height: 500)
 
     @Bindable private var settings: EditorSettings
+    @State private var themeError: String?
 
     public init(settings: EditorSettings) {
         self.settings = settings
@@ -96,9 +98,62 @@ public struct EditorSettingsView: View {
                     Text(L10n.string("Tabs")).tag(IndentStyle.tabs)
                 }
                 .pickerStyle(.segmented)
+
+                Picker(
+                    L10n.string("Editor Theme"),
+                    selection: Binding(
+                        get: { settings.activeEditorThemeID },
+                        set: { settings.selectEditorTheme(id: $0) }
+                    )
+                ) {
+                    ForEach(EditorThemeChoice.allCases) { theme in
+                        Text(theme.title).tag(theme.rawValue)
+                    }
+                    if !settings.customThemes.isEmpty {
+                        Divider()
+                        ForEach(settings.customThemes) { theme in
+                            Text(theme.name).tag(theme.id)
+                        }
+                    }
+                }
+                .pickerStyle(.menu)
+
+                HStack {
+                    Button {
+                        importTheme()
+                    } label: {
+                        Label(L10n.string("Import Theme…"), systemImage: "square.and.arrow.down")
+                    }
+                    Button {
+                        exportTheme()
+                    } label: {
+                        Label(L10n.string("Export Theme…"), systemImage: "square.and.arrow.up")
+                    }
+                    .disabled(settings.selectedCustomThemeID == nil)
+                    Button {
+                        guard let id = settings.selectedCustomThemeID else { return }
+                        settings.removeCustomTheme(id: id)
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .buttonStyle(.borderless)
+                    .help(L10n.string("Delete Custom Theme"))
+                    .disabled(settings.selectedCustomThemeID == nil)
+                }
             }
         }
         .formStyle(.grouped)
+        .alert(
+            L10n.string("Theme Import Failed"),
+            isPresented: Binding(
+                get: { themeError != nil },
+                set: { if !$0 { themeError = nil } }
+            )
+        ) {
+            Button(L10n.string("OK"), role: .cancel) { themeError = nil }
+        } message: {
+            Text(themeError ?? "")
+        }
     }
 
     private var filesTab: some View {
@@ -147,7 +202,66 @@ public struct EditorSettingsView: View {
                     }
                 }
             }
+
+            Section(L10n.string("Settings File")) {
+                HStack {
+                    Button(L10n.string("Export Settings…"), action: exportSettings)
+                    Button(L10n.string("Import Settings…"), action: importSettings)
+                }
+            }
         }
         .formStyle(.grouped)
+    }
+
+    private func exportSettings() {
+        guard let data = try? settings.exportSnapshotData() else { return }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "tilde-settings.json"
+        panel.allowedContentTypes = [.json]
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+
+    private func importSettings() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.begin { response in
+            guard response == .OK, let url = panel.url,
+                  let data = try? Data(contentsOf: url)
+            else { return }
+            try? settings.importSnapshotData(data)
+        }
+    }
+
+    private func importTheme() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.begin { response in
+            guard response == .OK, let url = panel.url,
+                  let data = try? Data(contentsOf: url)
+            else { return }
+            do {
+                try settings.importThemeData(data)
+            } catch {
+                themeError = error.localizedDescription
+            }
+        }
+    }
+
+    private func exportTheme() {
+        guard let data = try? settings.exportThemeData() else { return }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "tilde-theme.json"
+        panel.allowedContentTypes = [.json]
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            try? data.write(to: url, options: .atomic)
+        }
     }
 }

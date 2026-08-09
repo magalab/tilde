@@ -7,6 +7,8 @@ readonly PROJECT_ROOT="${SCRIPT_DIR:h}"
 readonly CONFIGURATION="${1:-Debug}"
 readonly DERIVED_DATA_PATH="${PROJECT_ROOT}/.build/HostDerivedData"
 readonly SIGNING_IDENTITY="${CODE_SIGN_IDENTITY:--}"
+readonly APP_PATH="${DERIVED_DATA_PATH}/Build/Products/${CONFIGURATION}/Tilde.app"
+readonly EXTENSION_PATH="${APP_PATH}/Contents/PlugIns/TildeQuickLook.appex"
 
 cd "${PROJECT_ROOT}"
 
@@ -27,5 +29,14 @@ xcodebuild \
   ARCHS=arm64 \
   CODE_SIGN_IDENTITY="${SIGNING_IDENTITY}" \
   build
+
+# Xcode can update the SwiftPM resource bundle after signing the extension.
+# Re-sign from the nested extension outward so its sealed resources match.
+codesign --force \
+  --preserve-metadata=entitlements,requirements,flags,runtime \
+  --sign "${SIGNING_IDENTITY}" "${EXTENSION_PATH}"
+codesign --force \
+  --preserve-metadata=entitlements,requirements,flags,runtime \
+  --sign "${SIGNING_IDENTITY}" "${APP_PATH}"
 
 print "Built ${DERIVED_DATA_PATH}/Build/Products/${CONFIGURATION}/Tilde.app"

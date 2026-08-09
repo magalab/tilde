@@ -39,6 +39,26 @@
             "target": "TildeBenchmark",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release TildeBenchmark"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Tilde}",
+            "name": "Debug tilde",
+            "target": "tilde",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug tilde"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Tilde}",
+            "name": "Release tilde",
+            "target": "tilde",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release tilde"
         }
     ]
 }

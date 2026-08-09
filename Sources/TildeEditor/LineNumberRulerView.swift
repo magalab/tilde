@@ -7,15 +7,25 @@ final class LineNumberRulerView: NSRulerView {
     private weak var textView: NSTextView?
     private weak var document: TextDocument?
     private var labelFont = NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .regular)
+    private var palette = EditorThemePalette.light
 
-    init(scrollView: NSScrollView, textView: NSTextView, document: TextDocument) {
+    init(
+        scrollView: NSScrollView,
+        textView: NSTextView,
+        document: TextDocument,
+        palette: EditorThemePalette
+    ) {
         self.textView = textView
         self.document = document
+        self.palette = palette
         super.init(scrollView: scrollView, orientation: .verticalRuler)
         clientView = textView
         setAccessibilityElement(true)
         setAccessibilityLabel(L10n.string("Line numbers"))
-        refresh(font: textView.font ?? NSFont.monospacedSystemFont(ofSize: 13, weight: .regular))
+        refresh(
+            font: textView.font ?? NSFont.monospacedSystemFont(ofSize: 13, weight: .regular),
+            palette: palette
+        )
     }
 
     required init(coder: NSCoder) {
@@ -24,7 +34,8 @@ final class LineNumberRulerView: NSRulerView {
 
     override var isFlipped: Bool { true }
 
-    func refresh(font: NSFont) {
+    func refresh(font: NSFont, palette: EditorThemePalette) {
+        self.palette = palette
         labelFont = NSFont.monospacedDigitSystemFont(
             ofSize: max(10, font.pointSize * 0.82),
             weight: .regular
@@ -53,7 +64,7 @@ final class LineNumberRulerView: NSRulerView {
     }
 
     override func drawHashMarksAndLabels(in rect: NSRect) {
-        NSColor.textBackgroundColor.setFill()
+        palette.background.nsColor.setFill()
         bounds.fill()
 
         guard let textView,
@@ -105,7 +116,7 @@ final class LineNumberRulerView: NSRulerView {
             }
         }
 
-        NSColor.separatorColor.setStroke()
+        palette.divider.nsColor.setStroke()
         let divider = NSBezierPath()
         divider.move(to: NSPoint(x: bounds.maxX - 0.5, y: bounds.minY))
         divider.line(to: NSPoint(x: bounds.maxX - 0.5, y: bounds.maxY))
@@ -119,7 +130,7 @@ final class LineNumberRulerView: NSRulerView {
         paragraph.alignment = .right
         let attributes: [NSAttributedString.Key: Any] = [
             .font: labelFont,
-            .foregroundColor: NSColor.secondaryLabelColor,
+            .foregroundColor: palette.lineNumber.nsColor,
             .paragraphStyle: paragraph,
         ]
         let labelHeight = labelFont.ascender - labelFont.descender

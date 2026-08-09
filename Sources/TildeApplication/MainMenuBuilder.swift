@@ -142,6 +142,12 @@ enum MainMenuBuilder {
         menu.addItem(.separator())
         menu.addItem(withTitle: L10n.string("Indent Selection"), action: #selector(EditorTextView.indentSelection(_:)), keyEquivalent: "]")
         menu.addItem(withTitle: L10n.string("Outdent Selection"), action: #selector(EditorTextView.outdentSelection(_:)), keyEquivalent: "[")
+        let nextOccurrence = menu.addItem(
+            withTitle: L10n.string("Add Selection to Next Match"),
+            action: #selector(EditorTextView.selectNextOccurrence(_:)),
+            keyEquivalent: "d"
+        )
+        nextOccurrence.keyEquivalentModifierMask = [.command]
         root.submenu = menu
         return root
     }
@@ -152,9 +158,8 @@ enum MainMenuBuilder {
         let preview = menu.addItem(
             withTitle: L10n.string("Preview Markdown"),
             action: #selector(AppDelegate.toggleMarkdownPreview(_:)),
-            keyEquivalent: "p"
+            keyEquivalent: ""
         )
-        preview.keyEquivalentModifierMask = [.command, .shift]
         preview.target = actionTarget
         let wrap = menu.addItem(
             withTitle: L10n.string("Word Wrap"),
@@ -232,6 +237,27 @@ enum MainMenuBuilder {
     private static func navigationMenu() -> NSMenuItem {
         let root = NSMenuItem()
         let menu = NSMenu(title: L10n.string("Navigation"))
+        let quickOpen = menu.addItem(
+            withTitle: L10n.string("Quick Open…"),
+            action: #selector(AppDelegate.showQuickOpen(_:)),
+            keyEquivalent: "p"
+        )
+        quickOpen.target = NSApp.delegate
+        let commandPalette = menu.addItem(
+            withTitle: L10n.string("Command Palette…"),
+            action: #selector(AppDelegate.showCommandPalette(_:)),
+            keyEquivalent: "P"
+        )
+        commandPalette.keyEquivalentModifierMask = [.command, .shift]
+        commandPalette.target = NSApp.delegate
+        let outline = menu.addItem(
+            withTitle: L10n.string("Document Outline…"),
+            action: #selector(AppDelegate.showDocumentOutline(_:)),
+            keyEquivalent: "o"
+        )
+        outline.keyEquivalentModifierMask = [.command, .shift]
+        outline.target = NSApp.delegate
+        menu.addItem(.separator())
         let goToLine = menu.addItem(
             withTitle: L10n.string("Go to Line…"),
             action: #selector(EditorTextView.showGoToLinePanel(_:)),

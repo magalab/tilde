@@ -6,6 +6,6 @@ xcuserdata/
 .DS_Store
 
 # Generated distribution and local investigation artifacts.
-dist/*.dmg
+dist/
 dist/dmg-root/
 tmp/

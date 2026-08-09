@@ -16,6 +16,8 @@
 | Find and Replace | Option-Command-F |
 | Find Next / Previous | Command-G / Shift-Command-G |
 | Indent / Outdent selection | Command-] / Command-[ |
+| Add selection to next match | Command-D |
+| Rectangular selection | Option-drag |
 | Go to Line | Control-Command-L |
 | Toggle Markdown preview / split view | Shift-Command-P |
 | Increase / decrease editor font | Command-+ or Command-= / Command-- |

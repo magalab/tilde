@@ -10,6 +10,8 @@ struct DocumentRootView: View {
     @State private var session: EditorSession
     @State private var previewSnapshot: DocumentSnapshot?
     @State private var previewModel = MarkdownPreviewModel()
+    @State private var externalDiffText: String?
+    @State private var showingExternalDiff = false
     @Bindable private var settings: EditorSettings
 
     init(document: TextDocument, settings: EditorSettings) {
@@ -44,7 +46,7 @@ struct DocumentRootView: View {
             }
             content
             Divider()
-            EditorStatusView(document: document, session: session)
+            EditorStatusView(document: document, session: session, settings: settings)
         }
         .frame(minWidth: 520, minHeight: 360)
         .onExitCommand {
@@ -88,6 +90,29 @@ struct DocumentRootView: View {
         .onChange(of: session.scrollPosition) { _, _ in session.schedulePersist() }
         .onDisappear { session.persist() }
         .onChange(of: settingsPresentationState) { _, _ in }
+        .sheet(isPresented: $showingExternalDiff) {
+            if let externalDiffText {
+                let merge = document.externalMergeResult(with: externalDiffText)
+                ExternalDiffView(
+                    localText: document.textStorage.string,
+                    externalText: externalDiffText,
+                    mergedText: merge.text,
+                    hasConflicts: merge.hasConflicts,
+                    useDisk: {
+                        showingExternalDiff = false
+                        reloadFromDisk()
+                    },
+                    applyMerge: {
+                        document.applyExternalMerge(merge)
+                        showingExternalDiff = false
+                    },
+                    keepLocal: {
+                        document.keepLocalChangesAfterConflict()
+                        showingExternalDiff = false
+                    }
+                )
+            }
+        }
     }
 
     private var externalChangeBanner: some View {
@@ -99,6 +124,7 @@ struct DocumentRootView: View {
             Spacer()
             switch document.externalChangeState {
             case .conflict:
+                compareButton
                 Button(L10n.string("Keep Local")) {
                     document.keepLocalChangesAfterConflict()
                 }
@@ -115,6 +141,7 @@ struct DocumentRootView: View {
                 }
                 .keyboardShortcut(.defaultAction)
             case .changedOnDisk:
+                compareButton
                 Button(L10n.string("Try Again")) {
                     reloadFromDisk()
                 }
@@ -127,6 +154,17 @@ struct DocumentRootView: View {
         .frame(minHeight: 36)
         .background(.orange.opacity(0.08))
         .accessibilityElement(children: .contain)
+    }
+
+    private var compareButton: some View {
+        Button(L10n.string("Compare")) {
+            Task {
+                guard let text = try? await document.externalDiskText() else { return }
+                externalDiffText = text
+                showingExternalDiff = true
+            }
+        }
+        .disabled(document.fileURL == nil)
     }
 
     private var externalChangeMessage: String {

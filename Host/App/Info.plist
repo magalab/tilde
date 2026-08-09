@@ -33,6 +33,17 @@
     </array>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>Tilde command line requests</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>tilde</string>
+            </array>
+        </dict>
+    </array>
     <key>CFBundleIdentifier</key>
     <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleIconFile</key>

@@ -18,6 +18,14 @@ final class DocumentWindowController: NSWindowController {
         window.titleVisibility = .visible
         window.tabbingMode = .preferred
         window.isRestorable = true
+        if let fileURL = document.fileURL {
+            let encodedPath = Data(fileURL.standardizedFileURL.path.utf8)
+                .base64EncodedString()
+                .replacingOccurrences(of: "=", with: "")
+                .replacingOccurrences(of: "/", with: "_")
+                .replacingOccurrences(of: "+", with: "-")
+            window.setFrameAutosaveName("Tilde.Document.\(encodedPath)")
+        }
         super.init(window: window)
         shouldCascadeWindows = true
     }

@@ -8,6 +8,8 @@ public struct EditorPresentationState: Equatable, Sendable {
     public let showLineNumbers: Bool
     public let tabWidth: Int
     public let indentStyle: IndentStyle
+    public let editorThemeID: String
+    public let editorThemePalette: EditorThemePalette
 
     @MainActor
     public init(settings: EditorSettings) {
@@ -18,5 +20,7 @@ public struct EditorPresentationState: Equatable, Sendable {
         showLineNumbers = settings.showLineNumbers
         tabWidth = settings.tabWidth
         indentStyle = settings.indentStyle
+        editorThemeID = settings.activeEditorThemeID
+        editorThemePalette = settings.editorThemePalette
     }
 }

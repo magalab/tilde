@@ -10,6 +10,7 @@ let package = Package(
     ],
     products: [
         .executable(name: "Tilde", targets: ["TildeApp"]),
+        .executable(name: "tilde", targets: ["TildeCLI"]),
         .executable(name: "TildeBenchmark", targets: ["TildeBenchmark"]),
         .library(name: "TildeCore", targets: ["TildeCore"]),
         .library(name: "TildeDocument", targets: ["TildeDocument"]),
@@ -68,6 +69,10 @@ let package = Package(
         .executableTarget(
             name: "TildeApp",
             dependencies: ["TildeApplication"]
+        ),
+        .executableTarget(
+            name: "TildeCLI",
+            dependencies: ["TildeCore"]
         ),
         .executableTarget(
             name: "TildeBenchmark",

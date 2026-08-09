@@ -40,6 +40,18 @@ Dependencies are pinned to exact revisions in `Package.swift` and
 scripts/run-benchmarks.sh
 ```
 
+The command-line opener supports paths, line numbers, multiple files, and a
+separate window:
+
+```sh
+swift build -c release --product tilde
+scripts/install-cli.sh
+tilde README.md:20
+```
+
+The installer places `tilde` in `~/.local/bin`. Set `TILDE_CLI_PATH` to install
+a different binary.
+
 ## Native app and Quick Look bundles
 
 SwiftPM cannot declare Apple `.app` and `.appex` bundle product types. The thin

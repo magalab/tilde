@@ -3,7 +3,7 @@ import Foundation
 import Observation
 import TildeCore
 
-public enum IndentStyle: String, CaseIterable, Sendable {
+public enum IndentStyle: String, CaseIterable, Codable, Sendable {
     case tabs
     case spaces
 }
@@ -54,7 +54,7 @@ public struct EditorFontChoice: Identifiable, Hashable, Sendable {
     }
 }
 
-public enum PreviewTheme: String, CaseIterable, Sendable {
+public enum PreviewTheme: String, CaseIterable, Codable, Sendable {
     case system
     case light
     case dark
@@ -68,7 +68,7 @@ public enum PreviewTheme: String, CaseIterable, Sendable {
     }
 }
 
-public enum ApplicationTheme: String, CaseIterable, Sendable {
+public enum ApplicationTheme: String, CaseIterable, Codable, Sendable {
     case system
     case light
     case dark
@@ -90,7 +90,7 @@ public enum ApplicationTheme: String, CaseIterable, Sendable {
     }
 }
 
-public enum WindowOpeningMode: String, CaseIterable, Sendable {
+public enum WindowOpeningMode: String, CaseIterable, Codable, Sendable {
     case normal
     case maximized
     case fullScreen
@@ -104,7 +104,7 @@ public enum WindowOpeningMode: String, CaseIterable, Sendable {
     }
 }
 
-public enum DefaultEncodingChoice: String, CaseIterable, Sendable {
+public enum DefaultEncodingChoice: String, CaseIterable, Codable, Sendable {
     case utf8
     case utf16LittleEndian
     case utf16BigEndian
@@ -129,6 +129,36 @@ public enum DefaultEncodingChoice: String, CaseIterable, Sendable {
     }
 }
 
+public struct EditorSettingsSnapshot: Codable, Equatable, Sendable {
+    public var fontSize: Double
+    public var fontChoiceID: String
+    public var fontLigatures: Bool
+    public var wordWrap: Bool
+    public var showLineNumbers: Bool
+    public var tabWidth: Int
+    public var indentStyle: IndentStyle
+    public var editorTheme: EditorThemeChoice
+    public var defaultEncoding: DefaultEncodingChoice
+    public var defaultLineEnding: LineEnding
+    public var previewTheme: PreviewTheme
+    public var applicationTheme: ApplicationTheme
+    public var windowOpeningMode: WindowOpeningMode
+}
+
+public struct EditorThemeFile: Codable, Equatable, Sendable {
+    public static let currentVersion = 1
+    public let version: Int
+    public let theme: EditorThemeDefinition
+
+    public init(theme: EditorThemeDefinition, version: Int = currentVersion) throws {
+        guard version == Self.currentVersion else {
+            throw EditorThemeError.unsupportedVersion
+        }
+        self.version = version
+        self.theme = theme
+    }
+}
+
 @MainActor
 @Observable
 public final class EditorSettings {
@@ -140,11 +170,14 @@ public final class EditorSettings {
         static let showLineNumbers = "editor.showLineNumbers"
         static let tabWidth = "editor.tabWidth"
         static let indentStyle = "editor.indentStyle"
+        static let editorTheme = "editor.theme"
         static let defaultEncoding = "files.defaultEncoding"
         static let defaultLineEnding = "files.defaultLineEnding"
         static let previewTheme = "markdown.previewTheme"
         static let applicationTheme = "appearance.applicationTheme"
         static let windowOpeningMode = "windows.openingMode"
+        static let customThemes = "editor.customThemes"
+        static let selectedCustomTheme = "editor.selectedCustomTheme"
     }
 
     private let defaults: UserDefaults
@@ -173,6 +206,30 @@ public final class EditorSettings {
 
     public var indentStyle: IndentStyle {
         didSet { defaults.set(indentStyle.rawValue, forKey: Key.indentStyle) }
+    }
+
+    public var editorTheme: EditorThemeChoice {
+        didSet {
+            defaults.set(editorTheme.rawValue, forKey: Key.editorTheme)
+            selectedCustomThemeID = nil
+            defaults.removeObject(forKey: Key.selectedCustomTheme)
+        }
+    }
+
+    public private(set) var customThemes: [EditorThemeDefinition]
+    public private(set) var selectedCustomThemeID: String?
+
+    public var activeEditorThemeID: String {
+        selectedCustomThemeID ?? editorTheme.rawValue
+    }
+
+    @MainActor
+    public var editorThemePalette: EditorThemePalette {
+        if let selectedCustomThemeID,
+           let customTheme = customThemes.first(where: { $0.id == selectedCustomThemeID }) {
+            return customTheme.palette
+        }
+        return editorTheme.palette
     }
 
     public var defaultEncoding: DefaultEncodingChoice {
@@ -234,6 +291,110 @@ public final class EditorSettings {
         defaults.set(clamped, forKey: Key.tabWidth)
     }
 
+    public func selectEditorTheme(id: String) {
+        if let builtIn = EditorThemeChoice(rawValue: id) {
+            selectedCustomThemeID = nil
+            defaults.removeObject(forKey: Key.selectedCustomTheme)
+            editorTheme = builtIn
+            return
+        }
+        guard customThemes.contains(where: { $0.id == id }) else { return }
+        selectedCustomThemeID = id
+        defaults.set(id, forKey: Key.selectedCustomTheme)
+    }
+
+    public func exportThemeData(id: String? = nil) throws -> Data {
+        let theme: EditorThemeDefinition
+        if let id {
+            guard let found = customThemes.first(where: { $0.id == id }) else {
+                throw EditorThemeError.invalidMetadata
+            }
+            theme = found
+        } else if let selectedCustomThemeID,
+                  let found = customThemes.first(where: { $0.id == selectedCustomThemeID }) {
+            theme = found
+        } else {
+            let builtIn = editorTheme
+            theme = try EditorThemeDefinition(
+                id: builtIn.rawValue,
+                name: builtIn.title,
+                palette: builtIn.palette
+            )
+        }
+        let file = try EditorThemeFile(theme: theme)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try encoder.encode(file)
+    }
+
+    @discardableResult
+    public func importThemeData(_ data: Data) throws -> EditorThemeDefinition {
+        let file = try JSONDecoder().decode(EditorThemeFile.self, from: data)
+        let theme = try EditorThemeDefinition(
+            id: file.theme.id,
+            name: file.theme.name,
+            palette: file.theme.palette
+        )
+        guard EditorThemeChoice(rawValue: theme.id) == nil else {
+            throw EditorThemeError.invalidMetadata
+        }
+        customThemes.removeAll { $0.id == theme.id }
+        customThemes.append(theme)
+        customThemes.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        persistCustomThemes()
+        selectEditorTheme(id: theme.id)
+        return theme
+    }
+
+    public func removeCustomTheme(id: String) {
+        guard customThemes.contains(where: { $0.id == id }) else { return }
+        customThemes.removeAll { $0.id == id }
+        persistCustomThemes()
+        if selectedCustomThemeID == id {
+            selectEditorTheme(id: EditorThemeChoice.system.rawValue)
+        }
+    }
+
+    public func exportSnapshotData() throws -> Data {
+        let snapshot = EditorSettingsSnapshot(
+            fontSize: fontSize,
+            fontChoiceID: fontChoice.id,
+            fontLigatures: fontLigatures,
+            wordWrap: wordWrap,
+            showLineNumbers: showLineNumbers,
+            tabWidth: tabWidth,
+            indentStyle: indentStyle,
+            editorTheme: editorTheme,
+            defaultEncoding: defaultEncoding,
+            defaultLineEnding: defaultLineEnding,
+            previewTheme: previewTheme,
+            applicationTheme: applicationTheme,
+            windowOpeningMode: windowOpeningMode
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try encoder.encode(snapshot)
+    }
+
+    public func importSnapshotData(_ data: Data) throws {
+        let snapshot = try JSONDecoder().decode(EditorSettingsSnapshot.self, from: data)
+        setFontSize(snapshot.fontSize)
+        if let font = availableFonts.first(where: { $0.id == snapshot.fontChoiceID }) {
+            fontChoice = font
+        }
+        fontLigatures = snapshot.fontLigatures
+        wordWrap = snapshot.wordWrap
+        showLineNumbers = snapshot.showLineNumbers
+        setTabWidth(snapshot.tabWidth)
+        indentStyle = snapshot.indentStyle
+        editorTheme = snapshot.editorTheme
+        defaultEncoding = snapshot.defaultEncoding
+        defaultLineEnding = snapshot.defaultLineEnding
+        previewTheme = snapshot.previewTheme
+        applicationTheme = snapshot.applicationTheme
+        windowOpeningMode = snapshot.windowOpeningMode
+    }
+
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         availableFonts = EditorFontChoice.installedFonts()
@@ -251,6 +412,9 @@ public final class EditorSettings {
         indentStyle = IndentStyle(
             rawValue: defaults.string(forKey: Key.indentStyle) ?? ""
         ) ?? .spaces
+        editorTheme = EditorThemeChoice(
+            rawValue: defaults.string(forKey: Key.editorTheme) ?? ""
+        ) ?? .system
         defaultEncoding = DefaultEncodingChoice(
             rawValue: defaults.string(forKey: Key.defaultEncoding) ?? ""
         ) ?? .utf8
@@ -266,7 +430,31 @@ public final class EditorSettings {
         windowOpeningMode = WindowOpeningMode(
             rawValue: defaults.string(forKey: Key.windowOpeningMode) ?? ""
         ) ?? .maximized
+        customThemes = Self.loadCustomThemes(from: defaults)
+        selectedCustomThemeID = defaults.string(forKey: Key.selectedCustomTheme)
+        if let selectedCustomThemeID,
+           !customThemes.contains(where: { $0.id == selectedCustomThemeID }) {
+            self.selectedCustomThemeID = nil
+        }
         applyApplicationTheme()
+    }
+
+    private func persistCustomThemes() {
+        guard let data = try? JSONEncoder().encode(customThemes) else { return }
+        defaults.set(data, forKey: Key.customThemes)
+    }
+
+    private static func loadCustomThemes(from defaults: UserDefaults) -> [EditorThemeDefinition] {
+        guard let data = defaults.data(forKey: Key.customThemes),
+              let themes = try? JSONDecoder().decode([EditorThemeDefinition].self, from: data)
+        else { return [] }
+        return themes.compactMap { theme in
+            try? EditorThemeDefinition(
+                id: theme.id,
+                name: theme.name,
+                palette: theme.palette
+            )
+        }
     }
 
     private func applyApplicationTheme() {

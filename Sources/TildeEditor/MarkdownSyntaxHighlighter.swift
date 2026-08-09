@@ -9,6 +9,20 @@ enum MarkdownSyntaxKind: Equatable, Sendable {
     case strong
     case emphasis
     case link
+    case quote
+    case deletion
+    case html
+    case image
+    case url
+    case table
+    case frontMatter
+    case language
+    case codeKeyword
+    case codeString
+    case codeComment
+    case codeNumber
+    case codeType
+    case codeProperty
 }
 
 struct MarkdownSyntaxToken: Equatable, Sendable {
@@ -29,22 +43,199 @@ enum MarkdownSyntaxTokenizer {
     }
 
     private static let patterns: [Pattern] = [
+        Pattern(#"(?ms)\A---\n.*?\n---(?:\n|$)"#, kind: .frontMatter),
         Pattern(#"(?m)^#{1,6}[ \t]+[^\n]*"#, kind: .heading),
-        Pattern(#"(?m)^[ \t]*(?:`{3,}|~{3,})[^\n]*"#, kind: .code),
+        Pattern(#"(?m)^[ \t]*(?:`{3,}|~{3,})[ \t]*[A-Za-z0-9_+.-]+[^\n]*"#, kind: .language),
+        Pattern(#"(?ms)^[ \t]*(?:`{3,}|~{3,})[^\n]*\n.*?^[ \t]*(?:`{3,}|~{3,})[ \t]*(?:\n|$)"#, kind: .code),
         Pattern(#"(?m)^[ \t]*(?:>[ \t]?|[-+*][ \t]+|\d+\.[ \t]+)"#, kind: .marker),
+        Pattern(#"(?m)^[ \t]*>[^\n]*"#, kind: .quote),
+        Pattern(#"(?m)^[ \t]*\|?[ \t]*:?-{3,}:?[ \t]*(?:\|[^\n]*)?$"#, kind: .table),
         Pattern(#"`{1,2}[^`\n]+`{1,2}"#, kind: .code),
         Pattern(#"(\*\*|__)(?=\S)[^\n]+?(?<=\S)\1"#, kind: .strong),
         Pattern(#"(?<!\*)\*(?=\S)[^*\n]+?(?<=\S)\*(?!\*)"#, kind: .emphasis),
+        Pattern(#"(~~)(?=\S)[^\n]+?(?<=\S)\1"#, kind: .deletion),
+        Pattern(#"!\[[^\]\n]*\]\([^\)\n]+\)"#, kind: .image),
         Pattern(#"!?\[[^\]\n]+\]\([^)\n]+\)"#, kind: .link),
+        Pattern(#"(?<![\w])(https?://[^\s<>()]+|www\.[^\s<>()]+)"#, kind: .url),
+        Pattern(#"</?[A-Za-z][^>\n]*>"#, kind: .html),
+    ]
+
+    private static let fencedCodeExpression = try! NSRegularExpression(
+        pattern: #"(?ms)^[ \t]*(`{3,}|~{3,})[ \t]*([A-Za-z0-9_+.-]+)[^\n]*\n(.*?)^[ \t]*\1[ \t]*(?:\n|$)"#
+    )
+
+    private struct LanguageDefinition {
+        let keywords: String
+        let comment: String
+        let supportsTypes: Bool
+        let supportsProperties: Bool
+    }
+
+    private static let languages: [String: LanguageDefinition] = [
+        "swift": .init(
+            keywords: #"actor|any|associatedtype|async|await|class|convenience|defer|enum|extension|func|guard|if|import|in|init|let|macro|nil|operator|private|protocol|public|return|self|static|struct|switch|throws|try|var|where|while"#,
+            comment: #"//[^\n]*|/\*[\s\S]*?\*/"#,
+            supportsTypes: true,
+            supportsProperties: false
+        ),
+        "objc": .init(
+            keywords: #"auto|bool|class|const|else|for|if|import|interface|nil|return|static|struct|typedef|void|while"#,
+            comment: #"//[^\n]*|/\*[\s\S]*?\*/"#,
+            supportsTypes: true,
+            supportsProperties: false
+        ),
+        "c": .init(
+            keywords: #"auto|break|case|char|const|continue|default|do|else|enum|for|if|include|int|long|return|short|signed|static|struct|typedef|unsigned|void|while"#,
+            comment: #"//[^\n]*|/\*[\s\S]*?\*/"#,
+            supportsTypes: true,
+            supportsProperties: false
+        ),
+        "cpp": .init(
+            keywords: #"alignas|auto|bool|break|case|catch|class|const|continue|default|delete|else|enum|for|if|include|int|namespace|new|nullptr|private|public|return|static|struct|template|this|throw|try|using|virtual|void|while"#,
+            comment: #"//[^\n]*|/\*[\s\S]*?\*/"#,
+            supportsTypes: true,
+            supportsProperties: false
+        ),
+        "javascript": .init(
+            keywords: #"async|await|break|case|catch|class|const|continue|debugger|default|delete|else|export|extends|finally|for|from|function|if|import|in|instanceof|let|new|null|of|return|static|super|switch|this|throw|try|typeof|undefined|var|void|while|with|yield"#,
+            comment: #"//[^\n]*|/\*[\s\S]*?\*/"#,
+            supportsTypes: true,
+            supportsProperties: false
+        ),
+        "typescript": .init(
+            keywords: #"as|async|await|break|case|catch|class|const|continue|declare|default|else|enum|export|extends|finally|for|from|function|if|implements|import|in|interface|is|keyof|let|namespace|new|null|of|private|public|readonly|return|static|switch|this|throw|try|type|typeof|undefined|var|void|while|with|yield"#,
+            comment: #"//[^\n]*|/\*[\s\S]*?\*/"#,
+            supportsTypes: true,
+            supportsProperties: false
+        ),
+        "json": .init(
+            keywords: #"true|false|null"#,
+            comment: #"(?!)"#,
+            supportsTypes: false,
+            supportsProperties: true
+        ),
+        "python": .init(
+            keywords: #"and|as|assert|async|await|break|case|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|match|None|not|or|pass|raise|return|True|try|while|with|yield"#,
+            comment: #"#[^\n]*"#,
+            supportsTypes: true,
+            supportsProperties: false
+        ),
+        "shell": .init(
+            keywords: #"case|do|done|elif|else|esac|export|fi|for|function|if|in|local|return|then|until|while"#,
+            comment: #"#[^\n]*"#,
+            supportsTypes: false,
+            supportsProperties: false
+        ),
+        "sql": .init(
+            keywords: #"alter|and|as|begin|case|create|delete|drop|else|end|from|group|having|insert|into|join|limit|not|null|on|or|order|select|set|table|then|union|update|values|when|where|with"#,
+            comment: #"--[^\n]*|/\*[\s\S]*?\*/"#,
+            supportsTypes: false,
+            supportsProperties: false
+        ),
+        "html": .init(
+            keywords: #"!DOCTYPE|DOCTYPE"#,
+            comment: #"<!--[\s\S]*?-->"#,
+            supportsTypes: true,
+            supportsProperties: false
+        ),
+        "css": .init(
+            keywords: #"@media|@supports|@import|important"#,
+            comment: #"/\*[\s\S]*?\*/"#,
+            supportsTypes: false,
+            supportsProperties: true
+        ),
+        "yaml": .init(
+            keywords: #"true|false|null|yes|no"#,
+            comment: #"#[^\n]*"#,
+            supportsTypes: false,
+            supportsProperties: true
+        )
+    ]
+
+    private static let aliases: [String: String] = [
+        "js": "javascript", "jsx": "javascript", "mjs": "javascript",
+        "ts": "typescript", "tsx": "typescript",
+        "objc": "objc", "objective-c": "objc", "c++": "cpp", "h": "c", "hpp": "cpp",
+        "py": "python", "sh": "shell", "bash": "shell", "zsh": "shell",
+        "yml": "yaml", "htm": "html"
     ]
 
     static func tokens(in text: String) -> [MarkdownSyntaxToken] {
         let range = NSRange(location: 0, length: (text as NSString).length)
-        return patterns.flatMap { pattern in
+        var result = patterns.flatMap { pattern in
             pattern.expression.matches(in: text, range: range).map {
                 MarkdownSyntaxToken(range: $0.range, kind: pattern.kind)
             }
         }
+        result.append(contentsOf: languageTokens(in: text, range: range))
+        return result
+    }
+
+    private static func languageTokens(in text: String, range: NSRange) -> [MarkdownSyntaxToken] {
+        var result: [MarkdownSyntaxToken] = []
+        for match in fencedCodeExpression.matches(in: text, range: range) {
+            let languageRange = match.range(at: 2)
+            let bodyRange = match.range(at: 3)
+            let rawLanguage = (text as NSString).substring(with: languageRange).lowercased()
+            let language = aliases[rawLanguage] ?? rawLanguage
+            guard let definition = languages[language] else { continue }
+            let body = (text as NSString).substring(with: bodyRange)
+            result.append(contentsOf: lexicalTokens(
+                in: body,
+                baseLocation: bodyRange.location,
+                definition: definition
+            ))
+        }
+        return result
+    }
+
+    private static func lexicalTokens(
+        in text: String,
+        baseLocation: Int,
+        definition: LanguageDefinition
+    ) -> [MarkdownSyntaxToken] {
+        let nsRange = NSRange(location: 0, length: (text as NSString).length)
+        let patterns: [(String, MarkdownSyntaxKind, Int)] = [
+            (definition.comment, .codeComment, 100),
+            (#"\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`"#, .codeString, 90),
+            (#"\b\d+(?:\.\d+)?\b"#, .codeNumber, 50),
+            (#"\b(?:"# + definition.keywords + #")\b"#, .codeKeyword, 70)
+        ] + (definition.supportsTypes ? [(#"\b[A-Z][A-Za-z0-9_]*\b"#, .codeType, 60)] : [])
+            + (definition.supportsProperties ? [(#"\"[^\"\n]+\"(?=\s*:)|\b[A-Za-z_][A-Za-z0-9_-]*(?=\s*:)"#, .codeProperty, 95)] : [])
+
+        struct Candidate {
+            let token: MarkdownSyntaxToken
+            let priority: Int
+        }
+        let candidates = patterns.flatMap { pattern, kind, priority in
+            (try? NSRegularExpression(pattern: pattern)).map { expression in
+                expression.matches(in: text, range: nsRange).map { match in
+                    Candidate(
+                        token: MarkdownSyntaxToken(
+                            range: NSRange(
+                                location: baseLocation + match.range.location,
+                                length: match.range.length
+                            ),
+                            kind: kind
+                        ),
+                        priority: priority
+                    )
+                }
+            } ?? []
+        }
+        var selected: [Candidate] = []
+        for candidate in candidates.sorted(by: {
+            if $0.priority != $1.priority { return $0.priority > $1.priority }
+            return $0.token.range.location < $1.token.range.location
+        }) where candidate.token.range.length > 0 {
+            guard selected.allSatisfy({ NSIntersectionRange($0.token.range, candidate.token.range).length == 0 }) else {
+                continue
+            }
+            selected.append(candidate)
+        }
+        return selected
+            .sorted { $0.token.range.location < $1.token.range.location }
+            .map(\.token)
     }
 }
 
@@ -52,10 +243,16 @@ enum MarkdownSyntaxTokenizer {
 final class MarkdownSyntaxHighlighter {
     private weak var layoutManager: NSLayoutManager?
     private weak var textStorage: NSTextStorage?
+    private let palette: EditorThemePalette
 
-    init(layoutManager: NSLayoutManager, textStorage: NSTextStorage) {
+    init(
+        layoutManager: NSLayoutManager,
+        textStorage: NSTextStorage,
+        palette: EditorThemePalette = .light
+    ) {
         self.layoutManager = layoutManager
         self.textStorage = textStorage
+        self.palette = palette
     }
 
     func highlightAll() {
@@ -121,12 +318,26 @@ final class MarkdownSyntaxHighlighter {
 
     private func color(for kind: MarkdownSyntaxKind) -> NSColor {
         switch kind {
-        case .heading: .systemPurple
-        case .marker: .secondaryLabelColor
-        case .code: .systemOrange
-        case .strong: .systemPink
-        case .emphasis: .systemTeal
-        case .link: .systemBlue
+        case .heading: palette.heading.nsColor
+        case .marker: palette.marker.nsColor
+        case .code: palette.code.nsColor
+        case .strong: palette.strong.nsColor
+        case .emphasis: palette.emphasis.nsColor
+        case .link: palette.link.nsColor
+        case .quote: palette.quote.nsColor
+        case .deletion: palette.deletion.nsColor
+        case .html: palette.html.nsColor
+        case .image: palette.link.nsColor
+        case .url: palette.link.nsColor
+        case .table: palette.marker.nsColor
+        case .frontMatter: palette.html.nsColor
+        case .language: palette.code.nsColor
+        case .codeKeyword: palette.emphasis.nsColor
+        case .codeString: palette.code.nsColor
+        case .codeComment: palette.quote.nsColor
+        case .codeNumber: palette.marker.nsColor
+        case .codeType: palette.heading.nsColor
+        case .codeProperty: palette.link.nsColor
         }
     }
 }
