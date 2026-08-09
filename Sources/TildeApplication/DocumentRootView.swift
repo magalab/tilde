@@ -298,6 +298,7 @@ struct DocumentRootView: View {
         if let previewSnapshot {
             MarkdownPreviewView(
                 snapshot: previewSnapshot,
+                policy: markdownPreviewPolicy,
                 model: previewModel,
                 scrollPosition: $session.previewScrollPosition
             )
@@ -306,6 +307,12 @@ struct DocumentRootView: View {
             ProgressView()
                 .onAppear { previewSnapshot = document.makeSnapshot() }
         }
+    }
+
+    private var markdownPreviewPolicy: MarkdownPolicy {
+        var policy = MarkdownPolicy.default
+        policy.allowsRemoteResources = settings.allowsRemoteImages
+        return policy
     }
 
     private var previewColorScheme: ColorScheme? {

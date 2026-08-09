@@ -28,6 +28,8 @@
 "Preview" = "Preview";
 "Split" = "Split";
 "Preview Theme" = "Preview Theme";
+"Load remote images" = "Load remote images";
+"Remote images are loaded only when enabled." = "Remote images are loaded only when enabled.";
 "Application" = "Application";
 "Application Theme" = "Application Theme";
 "Open New Windows" = "Open New Windows";

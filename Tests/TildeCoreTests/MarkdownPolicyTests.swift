@@ -16,6 +16,10 @@ final class MarkdownPolicyTests: XCTestCase {
         let policy = MarkdownPolicy.default
         XCTAssertFalse(policy.allowsRemoteResource(URL(string: "https://example.com/image.png")!))
         XCTAssertTrue(policy.allowsRemoteResource(URL(fileURLWithPath: "/tmp/image.png")))
+
+        var enabled = policy
+        enabled.allowsRemoteResources = true
+        XCTAssertTrue(enabled.allowsRemoteResource(URL(string: "https://example.com/image.png")!))
     }
 
     func testResourceResolverRejectsTraversalAndRemoteURLs() {

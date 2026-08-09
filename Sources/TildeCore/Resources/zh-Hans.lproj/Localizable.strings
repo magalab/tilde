@@ -28,6 +28,8 @@
 "Preview" = "预览";
 "Split" = "分栏";
 "Preview Theme" = "预览主题";
+"Load remote images" = "加载远程图片";
+"Remote images are loaded only when enabled." = "仅在启用后加载远程图片。";
 "Application" = "应用";
 "Application Theme" = "应用主题";
 "Open New Windows" = "新窗口打开方式";

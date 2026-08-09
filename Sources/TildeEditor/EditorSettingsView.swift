@@ -182,6 +182,14 @@ public struct EditorSettingsView: View {
                         Text(theme.title).tag(theme)
                     }
                 }
+
+                Toggle(
+                    L10n.string("Load remote images"),
+                    isOn: $settings.allowsRemoteImages
+                )
+                Text(L10n.string("Remote images are loaded only when enabled."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
