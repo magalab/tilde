@@ -141,8 +141,65 @@ public struct EditorSettingsSnapshot: Codable, Equatable, Sendable {
     public var defaultEncoding: DefaultEncodingChoice
     public var defaultLineEnding: LineEnding
     public var previewTheme: PreviewTheme
+    public var allowsRemoteImages: Bool
     public var applicationTheme: ApplicationTheme
     public var windowOpeningMode: WindowOpeningMode
+
+    private enum CodingKeys: String, CodingKey {
+        case fontSize, fontChoiceID, fontLigatures, wordWrap, showLineNumbers, tabWidth
+        case indentStyle, editorTheme, defaultEncoding, defaultLineEnding, previewTheme
+        case allowsRemoteImages, applicationTheme, windowOpeningMode
+    }
+
+    public init(
+        fontSize: Double,
+        fontChoiceID: String,
+        fontLigatures: Bool,
+        wordWrap: Bool,
+        showLineNumbers: Bool,
+        tabWidth: Int,
+        indentStyle: IndentStyle,
+        editorTheme: EditorThemeChoice,
+        defaultEncoding: DefaultEncodingChoice,
+        defaultLineEnding: LineEnding,
+        previewTheme: PreviewTheme,
+        allowsRemoteImages: Bool,
+        applicationTheme: ApplicationTheme,
+        windowOpeningMode: WindowOpeningMode
+    ) {
+        self.fontSize = fontSize
+        self.fontChoiceID = fontChoiceID
+        self.fontLigatures = fontLigatures
+        self.wordWrap = wordWrap
+        self.showLineNumbers = showLineNumbers
+        self.tabWidth = tabWidth
+        self.indentStyle = indentStyle
+        self.editorTheme = editorTheme
+        self.defaultEncoding = defaultEncoding
+        self.defaultLineEnding = defaultLineEnding
+        self.previewTheme = previewTheme
+        self.allowsRemoteImages = allowsRemoteImages
+        self.applicationTheme = applicationTheme
+        self.windowOpeningMode = windowOpeningMode
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        fontSize = try container.decode(Double.self, forKey: .fontSize)
+        fontChoiceID = try container.decode(String.self, forKey: .fontChoiceID)
+        fontLigatures = try container.decode(Bool.self, forKey: .fontLigatures)
+        wordWrap = try container.decode(Bool.self, forKey: .wordWrap)
+        showLineNumbers = try container.decode(Bool.self, forKey: .showLineNumbers)
+        tabWidth = try container.decode(Int.self, forKey: .tabWidth)
+        indentStyle = try container.decode(IndentStyle.self, forKey: .indentStyle)
+        editorTheme = try container.decode(EditorThemeChoice.self, forKey: .editorTheme)
+        defaultEncoding = try container.decode(DefaultEncodingChoice.self, forKey: .defaultEncoding)
+        defaultLineEnding = try container.decode(LineEnding.self, forKey: .defaultLineEnding)
+        previewTheme = try container.decode(PreviewTheme.self, forKey: .previewTheme)
+        allowsRemoteImages = try container.decodeIfPresent(Bool.self, forKey: .allowsRemoteImages) ?? false
+        applicationTheme = try container.decode(ApplicationTheme.self, forKey: .applicationTheme)
+        windowOpeningMode = try container.decode(WindowOpeningMode.self, forKey: .windowOpeningMode)
+    }
 }
 
 public struct EditorThemeFile: Codable, Equatable, Sendable {
@@ -174,6 +231,7 @@ public final class EditorSettings {
         static let defaultEncoding = "files.defaultEncoding"
         static let defaultLineEnding = "files.defaultLineEnding"
         static let previewTheme = "markdown.previewTheme"
+        static let allowsRemoteImages = "markdown.allowsRemoteImages"
         static let applicationTheme = "appearance.applicationTheme"
         static let windowOpeningMode = "windows.openingMode"
         static let customThemes = "editor.customThemes"
@@ -242,6 +300,10 @@ public final class EditorSettings {
 
     public var previewTheme: PreviewTheme {
         didSet { defaults.set(previewTheme.rawValue, forKey: Key.previewTheme) }
+    }
+
+    public var allowsRemoteImages: Bool {
+        didSet { defaults.set(allowsRemoteImages, forKey: Key.allowsRemoteImages) }
     }
 
     public var applicationTheme: ApplicationTheme {
@@ -368,6 +430,7 @@ public final class EditorSettings {
             defaultEncoding: defaultEncoding,
             defaultLineEnding: defaultLineEnding,
             previewTheme: previewTheme,
+            allowsRemoteImages: allowsRemoteImages,
             applicationTheme: applicationTheme,
             windowOpeningMode: windowOpeningMode
         )
@@ -391,6 +454,7 @@ public final class EditorSettings {
         defaultEncoding = snapshot.defaultEncoding
         defaultLineEnding = snapshot.defaultLineEnding
         previewTheme = snapshot.previewTheme
+        allowsRemoteImages = snapshot.allowsRemoteImages
         applicationTheme = snapshot.applicationTheme
         windowOpeningMode = snapshot.windowOpeningMode
     }
@@ -424,6 +488,7 @@ public final class EditorSettings {
         previewTheme = PreviewTheme(
             rawValue: defaults.string(forKey: Key.previewTheme) ?? ""
         ) ?? .system
+        allowsRemoteImages = defaults.object(forKey: Key.allowsRemoteImages) as? Bool ?? false
         applicationTheme = ApplicationTheme(
             rawValue: defaults.string(forKey: Key.applicationTheme) ?? ""
         ) ?? .system

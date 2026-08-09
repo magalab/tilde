@@ -24,6 +24,7 @@ final class EditorSettingsTests: XCTestCase {
         settings.showLineNumbers = true
         settings.editorTheme = .dracula
         settings.previewTheme = .dark
+        settings.allowsRemoteImages = true
         settings.applicationTheme = .dark
         settings.windowOpeningMode = .fullScreen
 
@@ -36,6 +37,7 @@ final class EditorSettingsTests: XCTestCase {
         XCTAssertTrue(restored.showLineNumbers)
         XCTAssertEqual(restored.editorTheme, .dracula)
         XCTAssertEqual(restored.previewTheme, .dark)
+        XCTAssertTrue(restored.allowsRemoteImages)
         XCTAssertEqual(restored.applicationTheme, .dark)
         XCTAssertEqual(restored.windowOpeningMode, .fullScreen)
         XCTAssertEqual(NSApplication.shared.appearance?.name, .darkAqua)
@@ -131,6 +133,7 @@ final class EditorSettingsTests: XCTestCase {
         settings.defaultEncoding = .utf16LittleEndian
         settings.defaultLineEnding = .cr
         settings.previewTheme = .dark
+        settings.allowsRemoteImages = true
 
         let data = try settings.exportSnapshotData()
         let restoredDefaults = UserDefaults(suiteName: "TildeEditorTests-\(UUID().uuidString)")!
@@ -144,6 +147,7 @@ final class EditorSettingsTests: XCTestCase {
         XCTAssertEqual(restored.defaultEncoding, .utf16LittleEndian)
         XCTAssertEqual(restored.defaultLineEnding, .cr)
         XCTAssertEqual(restored.previewTheme, .dark)
+        XCTAssertTrue(restored.allowsRemoteImages)
     }
 
     func testCustomThemeImportsPersistsSelectsAndExports() throws {

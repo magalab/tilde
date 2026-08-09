@@ -41,8 +41,15 @@ public struct MarkdownPreviewView: View {
                     .textual.structuredTextStyle(.gitHub)
                     .textual.textSelection(.enabled)
                     .textual.imageAttachmentLoader(
-                        SecureAttachmentLoader(documentURL: snapshot.fileURL, policy: policy)
+                        MarkdownAttachmentLoader(
+                            local: SecureAttachmentLoader(
+                                documentURL: snapshot.fileURL,
+                                policy: policy
+                            ),
+                            policy: policy
+                        )
                     )
+                    .id(policy.allowsRemoteResources)
                     .frame(maxWidth: 960, alignment: .leading)
                     .padding(.horizontal, 28)
                     .padding(.vertical, 24)
