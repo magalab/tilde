@@ -5,6 +5,16 @@ tagged release is grouped under `Unreleased`.
 
 ## Unreleased
 
+## 0.3.0 - 2026-08-12
+
+- Add copy controls and language labels to fenced Markdown code blocks.
+- Reduce Markdown preview memory use by releasing hidden preview state and
+  downsampling oversized local and remote images.
+- Prevent stale asynchronous preview renders from replacing newer content or
+  error state.
+- Bound undo history when editing large files and update the limit as documents
+  cross the large-file threshold.
+
 ## 0.2.1 - 2026-08-09
 
 - Fix the packaged command-line helper overwriting the main app executable on
