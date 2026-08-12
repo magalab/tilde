@@ -35,6 +35,62 @@ struct LocalImageAttachment: Attachment {
     func pngData() -> Data? { nil }
 }
 
+private enum PreviewImageDecoder {
+    // A 2K square is enough for a retina-sized Markdown preview while keeping decoded image
+    // memory bounded. The source image is still validated against the policy before this cap is
+    // applied.
+    private static let maximumRenderedPixels = 4_000_000
+
+    static func renderedData(
+        from data: Data,
+        source: CGImageSource,
+        pixelWidth: Double,
+        pixelHeight: Double
+    ) throws -> (data: Data, pixelSize: CGSize) {
+        guard pixelWidth * pixelHeight > Double(maximumRenderedPixels) else {
+            return (
+                data,
+                CGSize(width: pixelWidth, height: pixelHeight)
+            )
+        }
+
+        let maxPixelSize = Int(sqrt(Double(maximumRenderedPixels)))
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+            kCGImageSourceShouldCache: false,
+            kCGImageSourceShouldCacheImmediately: false,
+        ]
+        guard let image = CGImageSourceCreateThumbnailAtIndex(
+            source,
+            0,
+            options as CFDictionary
+        ) else {
+            throw SecureAttachmentLoader.Blocked.invalidImage
+        }
+
+        let output = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(
+            output,
+            UTType.png.identifier as CFString,
+            1,
+            nil
+        ) else {
+            throw SecureAttachmentLoader.Blocked.invalidImage
+        }
+        CGImageDestinationAddImage(destination, image, nil)
+        guard CGImageDestinationFinalize(destination) else {
+            throw SecureAttachmentLoader.Blocked.invalidImage
+        }
+
+        return (
+            output as Data,
+            CGSize(width: image.width, height: image.height)
+        )
+    }
+}
+
 private actor AttachmentBudget {
     private var count = 0
     private var totalBytes = 0
@@ -96,10 +152,16 @@ struct SecureAttachmentLoader: AttachmentLoader {
               width * height <= Double(policy.maximumImagePixels)
         else { throw Blocked.invalidImage }
 
+        let rendered = try PreviewImageDecoder.renderedData(
+            from: data,
+            source: source,
+            pixelWidth: width,
+            pixelHeight: height
+        )
         return LocalImageAttachment(
-            data: data,
+            data: rendered.data,
             description: text,
-            pixelSize: CGSize(width: width, height: height)
+            pixelSize: rendered.pixelSize
         )
     }
 }
@@ -225,10 +287,16 @@ private struct RemoteImageAttachmentLoader: AttachmentLoader {
             throw SecureAttachmentLoader.Blocked.invalidImage
         }
 
+        let rendered = try PreviewImageDecoder.renderedData(
+            from: data,
+            source: source,
+            pixelWidth: width,
+            pixelHeight: height
+        )
         return LocalImageAttachment(
-            data: data,
+            data: rendered.data,
             description: text,
-            pixelSize: CGSize(width: width, height: height)
+            pixelSize: rendered.pixelSize
         )
     }
 }

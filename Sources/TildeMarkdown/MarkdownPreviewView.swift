@@ -39,6 +39,7 @@ public struct MarkdownPreviewView: View {
                         parser: PreparedMarkupParser(prepared: prepared.attributedString)
                     )
                     .textual.structuredTextStyle(.gitHub)
+                    .textual.codeBlockStyle(CopyableCodeBlockStyle())
                     .textual.textSelection(.enabled)
                     .textual.imageAttachmentLoader(
                         MarkdownAttachmentLoader(
@@ -77,5 +78,46 @@ public struct MarkdownPreviewView: View {
         .task(id: "\(snapshot.revision)-\(model.retryToken)") {
             await model.render(snapshot: snapshot, policy: policy)
         }
+    }
+}
+
+private struct CopyableCodeBlockStyle: StructuredText.CodeBlockStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                if let languageHint = configuration.languageHint,
+                   !languageHint.isEmpty
+                {
+                    Text(languageHint)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 0)
+
+                Button {
+                    configuration.codeBlock.copyToPasteboard()
+                } label: {
+                    Label(L10n.string("Copy"), systemImage: "doc.on.doc")
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+                .help(L10n.string("Copy"))
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+
+            Overflow {
+                configuration.label
+                    .textual.lineSpacing(.fontScaled(0.225))
+                    .textual.fontScale(0.85)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .monospaced()
+                    .padding(16)
+            }
+        }
+        .background(.secondary.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .textual.blockSpacing(.init(top: 0, bottom: 16))
     }
 }

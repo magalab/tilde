@@ -56,9 +56,14 @@ struct DocumentRootView: View {
         }
         .onChange(of: session.mode) { _, mode in
             session.schedulePersist()
-            if mode != .edit {
+            if mode == .edit {
+                resetPreviewState()
+            } else {
                 if document.isMarkdownPreviewAllowed {
-                    previewSnapshot = document.makeSnapshot()
+                    if previewSnapshot == nil {
+                        previewModel.reset()
+                        previewSnapshot = document.makeSnapshot()
+                    }
                 } else {
                     session.mode = .edit
                 }
@@ -67,9 +72,10 @@ struct DocumentRootView: View {
         .onChange(of: document.revision) { _, _ in
             if session.mode != .edit {
                 if document.isMarkdownPreviewAllowed {
+                    previewModel.reset()
                     previewSnapshot = document.makeSnapshot()
                 } else {
-                    previewSnapshot = nil
+                    resetPreviewState()
                     session.mode = .edit
                 }
             }
@@ -95,7 +101,10 @@ struct DocumentRootView: View {
             // same document position without creating a scroll feedback loop.
             session.previewScrollPosition.scrollTo(y: max(0, offset))
         }
-        .onDisappear { session.persist() }
+        .onDisappear {
+            session.persist()
+            resetPreviewState()
+        }
         .onChange(of: settingsPresentationState) { _, _ in }
         .sheet(isPresented: $showingExternalDiff) {
             if let externalDiffText {
@@ -253,6 +262,11 @@ struct DocumentRootView: View {
                 document.presentError(error)
             }
         }
+    }
+
+    private func resetPreviewState() {
+        previewSnapshot = nil
+        previewModel.reset()
     }
 
     private var modeBar: some View {
