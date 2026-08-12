@@ -46,7 +46,10 @@ public struct EditorView: NSViewRepresentable {
             palette: settings.editorThemePalette
         )
         context.coordinator.refreshSelectionDecorations(in: textView)
-        context.coordinator.presentationState = EditorPresentationState(settings: settings)
+        context.coordinator.presentationState = EditorPresentationState(
+            settings: settings,
+            largeFileDisposition: document.largeFileDisposition
+        )
         DispatchQueue.main.async { [weak textView, weak scrollView] in
             if let scrollView {
                 scrollView.contentView.scroll(to: session.scrollPosition)
@@ -59,7 +62,11 @@ public struct EditorView: NSViewRepresentable {
 
     public func updateNSView(_ scrollView: NSScrollView, context: Context) {
         guard let textView = scrollView.documentView as? EditorTextView else { return }
-        let presentationState = EditorPresentationState(settings: settings)
+        updateUndoLevels(for: textView)
+        let presentationState = EditorPresentationState(
+            settings: settings,
+            largeFileDisposition: document.largeFileDisposition
+        )
         if context.coordinator.presentationState != presentationState {
             apply(settings, to: textView, in: scrollView)
             context.coordinator.presentationState = presentationState
@@ -108,6 +115,7 @@ public struct EditorView: NSViewRepresentable {
         textView.isRichText = false
         textView.importsGraphics = false
         textView.allowsUndo = true
+        updateUndoLevels(for: textView)
         textView.usesFindPanel = true
         textView.isIncrementalSearchingEnabled = true
         textView.isAutomaticQuoteSubstitutionEnabled = false
@@ -235,6 +243,13 @@ public struct EditorView: NSViewRepresentable {
         }
         textView.needsLayout = true
         textView.needsDisplay = true
+        updateUndoLevels(for: textView)
+    }
+
+    private func updateUndoLevels(for textView: NSTextView) {
+        let levels = document.largeFileDisposition == .standard ? 0 : 50
+        guard textView.undoManager?.levelsOfUndo != levels else { return }
+        textView.undoManager?.levelsOfUndo = levels
     }
 
     private func configureLineNumbers(

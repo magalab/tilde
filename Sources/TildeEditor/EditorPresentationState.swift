@@ -1,4 +1,5 @@
 import Foundation
+import TildeCore
 
 public struct EditorPresentationState: Equatable, Sendable {
     public let fontSize: Double
@@ -10,9 +11,13 @@ public struct EditorPresentationState: Equatable, Sendable {
     public let indentStyle: IndentStyle
     public let editorThemeID: String
     public let editorThemePalette: EditorThemePalette
+    public let largeFileDisposition: LargeFileDisposition
 
     @MainActor
-    public init(settings: EditorSettings) {
+    public init(
+        settings: EditorSettings,
+        largeFileDisposition: LargeFileDisposition = .standard
+    ) {
         fontSize = settings.fontSize
         fontChoice = settings.fontChoice
         fontLigatures = settings.fontLigatures
@@ -22,5 +27,6 @@ public struct EditorPresentationState: Equatable, Sendable {
         indentStyle = settings.indentStyle
         editorThemeID = settings.activeEditorThemeID
         editorThemePalette = settings.editorThemePalette
+        self.largeFileDisposition = largeFileDisposition
     }
 }

@@ -68,6 +68,84 @@ final class MarkdownPreviewModelTests: XCTestCase {
         XCTAssertNil(model.errorMessage)
     }
 
+    func testResetReleasesPreparedMarkdown() async throws {
+        let model = MarkdownPreviewModel()
+        await model.render(snapshot: snapshot("```swift\nlet value = 1\n```"))
+        XCTAssertNotNil(model.prepared)
+
+        model.reset()
+
+        XCTAssertNil(model.prepared)
+        XCTAssertNil(model.errorMessage)
+        XCTAssertFalse(model.isRendering)
+    }
+
+    func testRenderingNewRevisionDoesNotRetainPreviousPreparedMarkdown() async throws {
+        let model = MarkdownPreviewModel()
+        await model.render(snapshot: snapshot("# First", revision: 1))
+        XCTAssertNotNil(model.prepared)
+
+        await model.render(snapshot: snapshot("# Second", revision: 2))
+
+        let prepared = try XCTUnwrap(model.prepared)
+        XCTAssertEqual(prepared.revision, 2)
+        XCTAssertEqual(String(prepared.attributedString.characters), "Second")
+    }
+
+    func testStaleRenderCannotReplaceNewerPreparedMarkdownOrError() async throws {
+        let controller = RenderController()
+        let model = MarkdownPreviewModel { snapshot, _ in
+            try await controller.prepare(snapshot: snapshot)
+        }
+
+        let firstRender = Task {
+            await model.render(snapshot: snapshot("# First", revision: 1))
+        }
+        await controller.waitUntilStarted(revision: 1)
+
+        model.reset()
+        let secondRender = Task {
+            await model.render(snapshot: snapshot("# Second", revision: 2))
+        }
+        await controller.waitUntilStarted(revision: 2)
+        await controller.succeed(revision: 2, text: "Second")
+        await secondRender.value
+
+        await controller.fail(revision: 1)
+        await firstRender.value
+
+        let prepared = try XCTUnwrap(model.prepared)
+        XCTAssertEqual(prepared.revision, 2)
+        XCTAssertEqual(String(prepared.attributedString.characters), "Second")
+        XCTAssertNil(model.errorMessage)
+    }
+
+    func testSourceLimitClearsRenderingStateWhilePreviousRenderIsInFlight() async {
+        let controller = RenderController()
+        let model = MarkdownPreviewModel { snapshot, _ in
+            try await controller.prepare(snapshot: snapshot)
+        }
+
+        let firstRender = Task {
+            await model.render(snapshot: snapshot("# First", revision: 1))
+        }
+        await controller.waitUntilStarted(revision: 1)
+        XCTAssertTrue(model.isRendering)
+
+        var limitedPolicy = MarkdownPolicy.default
+        limitedPolicy.maximumSourceBytes = 1
+        await model.render(
+            snapshot: snapshot("# Second", revision: 2),
+            policy: limitedPolicy
+        )
+
+        XCTAssertFalse(model.isRendering)
+        XCTAssertNotNil(model.errorMessage)
+
+        await controller.fail(revision: 1)
+        await firstRender.value
+    }
+
     private func snapshot(_ text: String, revision: UInt64 = 1) -> DocumentSnapshot {
         DocumentSnapshot(
             text: text,
@@ -77,5 +155,42 @@ final class MarkdownPreviewModelTests: XCTestCase {
             documentType: TildeDocumentType.markdown,
             fileURL: nil
         )
+    }
+}
+
+private enum TestRenderError: Error {
+    case failed
+}
+
+private actor RenderController {
+    private var startedRevisions = Set<UInt64>()
+    private var continuations: [UInt64: CheckedContinuation<PreparedMarkdown, Error>] = [:]
+
+    func prepare(snapshot: DocumentSnapshot) async throws -> PreparedMarkdown {
+        startedRevisions.insert(snapshot.revision)
+        return try await withCheckedThrowingContinuation { continuation in
+            continuations[snapshot.revision] = continuation
+        }
+    }
+
+    func waitUntilStarted(revision: UInt64) async {
+        while !startedRevisions.contains(revision) {
+            await Task.yield()
+        }
+    }
+
+    func succeed(revision: UInt64, text: String) {
+        guard let continuation = continuations.removeValue(forKey: revision) else { return }
+        continuation.resume(
+            returning: PreparedMarkdown(
+                attributedString: AttributedString(text),
+                revision: revision
+            )
+        )
+    }
+
+    func fail(revision: UInt64) {
+        guard let continuation = continuations.removeValue(forKey: revision) else { return }
+        continuation.resume(throwing: TestRenderError.failed)
     }
 }

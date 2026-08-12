@@ -119,6 +119,12 @@ public final class EditorCoordinator: NSObject, NSTextViewDelegate {
         pendingEdit = nil
         let textView = notification.object as? NSTextView
         if let textView {
+            let levels = document.largeFileDisposition == .standard ? 0 : 50
+            if textView.undoManager?.levelsOfUndo != levels {
+                textView.undoManager?.levelsOfUndo = levels
+            }
+        }
+        if let textView {
             refreshSyntaxHighlighting(in: textView, palette: syntaxPalette, edit: appliedEdit)
             (textView.enclosingScrollView?.verticalRulerView as? LineNumberRulerView)?
                 .invalidateLineNumbers()
