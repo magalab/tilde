@@ -10,6 +10,8 @@ pin changes.
 | swift-cmark | `7898f1b3e4befeecee56cb4a3bc8eebd2cb63219` (`gfm`) | BSD-2-Clause-style | Include copyright and license text |
 | swift-concurrency-extras | 1.4.1 / `5fa253428866f2360c3754e88537f700ed2656b5` | MIT | Include copyright and MIT text |
 | swiftui-math | 0.1.0 / `0b5c2cfaaec8d6193db206f675048eeb5ce95f71` | MIT; bundled upstream notices apply | Include its license and bundled notices |
+| BeautifulMermaid | `6a23a29e91af8f5b3e9fc09945332ca193bd69ec` | MIT | Include copyright and MIT text |
+| elk-swift | 1.0.2 / `32f8042e3509a4819f00ff9cd46e829ec2b26da0` | EPL-2.0 | Include EPL-2.0 text and original ELK notices |
 
 `SnapshotTesting` appears in Textual's upstream third-party audit but is not in
 this app's resolved shipping dependency graph.

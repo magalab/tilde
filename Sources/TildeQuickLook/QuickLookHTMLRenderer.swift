@@ -1,4 +1,6 @@
 import Foundation
+import AppKit
+import BeautifulMermaid
 import ImageIO
 import Markdown
 import TildeCore
@@ -111,6 +113,7 @@ private struct SafeHTMLFormatter: MarkupWalker {
     let policy: MarkdownPolicy
     let documentDirectory: URL?
     private var totalAttachmentBytes = 0
+    private var mermaidCount = 0
     private var inTableHead = false
     private var tableColumnAlignments: [Table.ColumnAlignment?]?
     private var currentTableColumn = 0
@@ -127,6 +130,12 @@ private struct SafeHTMLFormatter: MarkupWalker {
     }
 
     mutating func visitCodeBlock(_ codeBlock: CodeBlock) {
+        if codeBlock.language?.lowercased() == "mermaid",
+           appendMermaidAttachment(code: codeBlock.code)
+        {
+            return
+        }
+
         let language = codeBlock.language.map {
             " class=\"language-\(HTMLEscaping.escape($0))\""
         } ?? ""
@@ -329,5 +338,45 @@ private struct SafeHTMLFormatter: MarkupWalker {
             data: data,
             contentTypeIdentifier: contentType.identifier
         )
+    }
+
+    private mutating func appendMermaidAttachment(code: String) -> Bool {
+        let renderer = MermaidImageRenderer(theme: .githubLight)
+        guard mermaidCount < policy.maximumMermaidDiagramCount,
+              code.utf8.count <= policy.maximumMermaidSourceBytes,
+              let positioned = try? MermaidRenderer.layout(code),
+              policy.allowsMermaidImagePixels(
+                  width: positioned.width,
+                  height: positioned.height,
+                  scale: Double(renderer.scale)
+              ),
+              let image = renderer.renderImage(from: positioned, scale: renderer.scale),
+              let tiffData = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData),
+              let data = bitmap.representation(using: .png, properties: [:]),
+              data.count <= policy.maximumAttachmentBytes,
+              let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue,
+              let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue,
+              width > 0,
+              height > 0,
+              width * height <= policy.maximumMermaidImagePixels,
+              attachments.count < policy.maximumAttachmentCount,
+              totalAttachmentBytes + data.count <= policy.maximumAttachmentBytes
+        else { return false }
+
+        let identifier = "mermaid-\(attachments.count)"
+        attachments.append(
+            QuickLookAttachment(
+                identifier: identifier,
+                data: data,
+                contentTypeIdentifier: UTType.png.identifier
+            )
+        )
+        totalAttachmentBytes += data.count
+        mermaidCount += 1
+        result += "<p class=\"mermaid\"><img src=\"cid:\(identifier)\" alt=\"Mermaid diagram\"></p>\n"
+        return true
     }
 }

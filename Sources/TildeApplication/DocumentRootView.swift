@@ -299,35 +299,41 @@ struct DocumentRootView: View {
     @ViewBuilder
     private var content: some View {
         @Bindable var session = session
-        switch session.mode {
-        case .edit:
-            EditorView(document: document, session: session, settings: settings)
-        case .preview:
-            previewContent
-        case .split:
-            HSplitView {
+        Group {
+            switch session.mode {
+            case .edit:
                 EditorView(document: document, session: session, settings: settings)
-                    .frame(minWidth: 260)
+            case .preview:
                 previewContent
-                    .frame(minWidth: 260)
+            case .split:
+                HSplitView {
+                    EditorView(document: document, session: session, settings: settings)
+                        .frame(minWidth: 260)
+                    previewContent
+                        .frame(minWidth: 260)
+                }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder
     private var previewContent: some View {
-        if let previewSnapshot {
-            MarkdownPreviewView(
-                snapshot: previewSnapshot,
-                policy: markdownPreviewPolicy,
-                model: previewModel,
-                scrollPosition: $session.previewScrollPosition
-            )
-            .preferredColorScheme(previewColorScheme)
-        } else {
-            ProgressView()
-                .onAppear { previewSnapshot = document.makeSnapshot() }
+        Group {
+            if let previewSnapshot {
+                MarkdownPreviewView(
+                    snapshot: previewSnapshot,
+                    policy: markdownPreviewPolicy,
+                    model: previewModel,
+                    scrollPosition: $session.previewScrollPosition
+                )
+                .preferredColorScheme(previewColorScheme)
+            } else {
+                ProgressView()
+                    .onAppear { previewSnapshot = document.makeSnapshot() }
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var markdownPreviewPolicy: MarkdownPolicy {

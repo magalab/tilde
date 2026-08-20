@@ -70,6 +70,12 @@ starts at 50 MiB, and 100 MiB is the largest validated v1 document size. These
 limits are documented and measured in
 [`docs/performance-baseline.md`](performance-baseline.md).
 
+The preview parser enables math syntax and normalizes GFM-style task markers
+before parsing. Mermaid fences are rendered as bounded image attachments in the
+app and Quick Look; Mermaid source size, diagram count, layout pixel area,
+attachment bytes, and final output are all checked independently. Unsupported
+or failed diagrams fall back without discarding the surrounding document.
+
 ## Validation map
 
 - `swift test` covers core policies, document behavior, editor behavior,

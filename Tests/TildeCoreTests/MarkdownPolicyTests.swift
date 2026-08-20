@@ -47,4 +47,13 @@ final class MarkdownPolicyTests: XCTestCase {
             "&lt;script a=&#39;&quot;&#39;&gt;&amp;"
         )
     }
+
+    func testMermaidPixelBudgetUsesRenderScale() {
+        var policy = MarkdownPolicy.default
+        policy.maximumMermaidImagePixels = 40_000
+
+        XCTAssertTrue(policy.allowsMermaidImagePixels(width: 100, height: 100))
+        XCTAssertFalse(policy.allowsMermaidImagePixels(width: 101, height: 100))
+        XCTAssertFalse(policy.allowsMermaidImagePixels(width: .infinity, height: 1))
+    }
 }

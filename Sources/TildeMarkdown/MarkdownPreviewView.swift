@@ -75,6 +75,7 @@ public struct MarkdownPreviewView: View {
                     .controlSize(.small)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task(id: "\(snapshot.revision)-\(model.retryToken)") {
             await model.render(snapshot: snapshot, policy: policy)
         }

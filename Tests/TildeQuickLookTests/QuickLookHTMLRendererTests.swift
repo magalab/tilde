@@ -15,6 +15,54 @@ final class QuickLookHTMLRendererTests: XCTestCase {
         XCTAssertTrue(html.contains("Content-Security-Policy"))
     }
 
+    func testRendersMermaidAsPNGAttachment() throws {
+        let rendered = try QuickLookHTMLRenderer.render(
+            markdown: "```mermaid\ngraph TD\nA-->B\n```"
+        )
+        let html = String(decoding: rendered.data, as: UTF8.self)
+
+        XCTAssertEqual(rendered.attachments.count, 1)
+        XCTAssertEqual(rendered.attachments[0].contentTypeIdentifier, "public.png")
+        XCTAssertTrue(html.contains("src=\"cid:mermaid-0\""))
+        XCTAssertFalse(html.contains("language-mermaid"))
+    }
+
+    func testUnrenderableMermaidFallsBackToCodeBlock() throws {
+        let rendered = try QuickLookHTMLRenderer.render(
+            markdown: "```mermaid\nnot a supported diagram\n```"
+        )
+        let html = String(decoding: rendered.data, as: UTF8.self)
+
+        XCTAssertTrue(rendered.attachments.isEmpty)
+        XCTAssertTrue(html.contains("language-mermaid"))
+        XCTAssertTrue(html.contains("not a supported diagram"))
+    }
+
+    func testMermaidDiagramCountBudgetFallsBackAfterLimit() throws {
+        var policy = MarkdownPolicy.default
+        policy.maximumMermaidDiagramCount = 1
+        let markdown = "```mermaid\ngraph TD\nA-->B\n```\n\n```mermaid\ngraph TD\nB-->C\n```"
+
+        let rendered = try QuickLookHTMLRenderer.render(markdown: markdown, policy: policy)
+        let html = String(decoding: rendered.data, as: UTF8.self)
+
+        XCTAssertEqual(rendered.attachments.count, 1)
+        XCTAssertTrue(html.contains("cid:mermaid-0"))
+        XCTAssertTrue(html.contains("language-mermaid"))
+    }
+
+    func testRendersTaskListCheckboxes() throws {
+        let rendered = try QuickLookHTMLRenderer.render(
+            markdown: "- [x] done\n- [ ] todo"
+        )
+        let html = String(decoding: rendered.data, as: UTF8.self)
+
+        XCTAssertTrue(html.contains("disabled checked"))
+        XCTAssertTrue(html.contains("<input type=\"checkbox\" disabled>"))
+        XCTAssertEqual(html.components(separatedBy: "type=\"checkbox\"").count - 1, 2)
+        XCTAssertEqual(html.components(separatedBy: "disabled checked").count - 1, 1)
+    }
+
     func testEscapesRawHTMLAndBlocksDangerousLinks() throws {
         let rendered = try QuickLookHTMLRenderer.render(
             markdown: "<script>alert('x')</script>\n\n[bad](javascript:alert(1))"
@@ -80,4 +128,3 @@ final class QuickLookHTMLRendererTests: XCTestCase {
         }
     }
 }
-

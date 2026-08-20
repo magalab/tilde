@@ -28,6 +28,10 @@ let package = Package(
             url: "https://github.com/swiftlang/swift-markdown.git",
             revision: "27b7fc1a19068bcea3d2072db0ce86360d1400ed"
         ),
+        .package(
+            url: "https://github.com/lukilabs/beautiful-mermaid-swift.git",
+            revision: "6a23a29e91af8f5b3e9fc09945332ca193bd69ec"
+        ),
     ],
     targets: [
         .target(
@@ -48,6 +52,7 @@ let package = Package(
                 "TildeCore",
                 "TildeDocument",
                 .product(name: "Textual", package: "textual"),
+                .product(name: "BeautifulMermaid", package: "beautiful-mermaid-swift"),
             ]
         ),
         .target(
@@ -55,6 +60,7 @@ let package = Package(
             dependencies: [
                 "TildeCore",
                 .product(name: "Markdown", package: "swift-markdown"),
+                .product(name: "BeautifulMermaid", package: "beautiful-mermaid-swift"),
             ]
         ),
         .target(

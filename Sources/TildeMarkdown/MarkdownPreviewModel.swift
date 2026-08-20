@@ -129,14 +129,12 @@ private enum MarkdownPreparser {
     ) async throws -> PreparedMarkdown {
         try await Task.detached(priority: .userInitiated) {
             try Task.checkCancellation()
-            var attributed = try AttributedString(
-                markdown: snapshot.text,
-                including: \.textual,
-                options: AttributedString.MarkdownParsingOptions(
-                    interpretedSyntax: .full,
-                    failurePolicy: .returnPartiallyParsedIfPossible
-                ),
-                baseURL: snapshot.fileURL?.deletingLastPathComponent()
+            let parser = await AttributedStringMarkdownParser.markdown(
+                baseURL: snapshot.fileURL?.deletingLastPathComponent(),
+                syntaxExtensions: [.math]
+            )
+            var attributed = try await parser.attributedString(
+                for: MarkdownSourcePreprocessor.prepareForAttributedString(snapshot.text)
             )
 
             let blockedLinkRanges = attributed.runs.compactMap { run -> Range<AttributedString.Index>? in

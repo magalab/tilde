@@ -1,4 +1,6 @@
 import AppKit
+import BeautifulMermaid
+import CryptoKit
 import ImageIO
 import SwiftUI
 import Textual
@@ -33,6 +35,40 @@ struct LocalImageAttachment: Attachment {
     }
 
     func pngData() -> Data? { nil }
+}
+
+struct MermaidImageAttachment: Attachment {
+    let data: Data
+    let description: String
+    let pixelSize: CGSize
+
+    @MainActor
+    var body: some View {
+        Group {
+            if let image = NSImage(data: data) {
+                Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                Text(description)
+            }
+        }
+    }
+
+    func sizeThatFits(
+        _ proposal: ProposedViewSize,
+        in _: TextEnvironmentValues
+    ) -> CGSize {
+        sizeThatFits(proposal)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize) -> CGSize {
+        guard pixelSize.width > 0, pixelSize.height > 0 else { return .zero }
+        let width = min(proposal.width ?? pixelSize.width, pixelSize.width)
+        return CGSize(width: width, height: width * pixelSize.height / pixelSize.width)
+    }
+
+    func pngData() -> Data? { data }
 }
 
 private enum PreviewImageDecoder {
@@ -91,8 +127,9 @@ private enum PreviewImageDecoder {
     }
 }
 
-private actor AttachmentBudget {
+actor AttachmentBudget {
     private var count = 0
+    private var mermaidCount = 0
     private var totalBytes = 0
 
     func reserve(bytes: Int, policy: MarkdownPolicy) -> Bool {
@@ -103,6 +140,33 @@ private actor AttachmentBudget {
         count += 1
         totalBytes += bytes
         return true
+    }
+
+    func reserveMermaid(policy: MarkdownPolicy) -> Bool {
+        guard count < policy.maximumAttachmentCount,
+              mermaidCount < policy.maximumMermaidDiagramCount
+        else { return false }
+        count += 1
+        mermaidCount += 1
+        return true
+    }
+
+    func add(bytes: Int, policy: MarkdownPolicy) -> Bool {
+        guard bytes <= policy.maximumAttachmentBytes,
+              totalBytes + bytes <= policy.maximumAttachmentBytes
+        else { return false }
+        totalBytes += bytes
+        return true
+    }
+
+    func release(bytes: Int = 0) {
+        count = max(0, count - 1)
+        totalBytes = max(0, totalBytes - bytes)
+    }
+
+    func releaseMermaid() {
+        count = max(0, count - 1)
+        mermaidCount = max(0, mermaidCount - 1)
     }
 }
 
@@ -115,11 +179,16 @@ struct SecureAttachmentLoader: AttachmentLoader {
 
     let documentDirectory: URL?
     let policy: MarkdownPolicy
-    private let budget = AttachmentBudget()
+    fileprivate let budget: AttachmentBudget
 
     init(documentURL: URL?, policy: MarkdownPolicy) {
+        self.init(documentURL: documentURL, policy: policy, budget: AttachmentBudget())
+    }
+
+    fileprivate init(documentURL: URL?, policy: MarkdownPolicy, budget: AttachmentBudget) {
         documentDirectory = documentURL?.deletingLastPathComponent()
         self.policy = policy
+        self.budget = budget
     }
 
     func attachment(
@@ -143,26 +212,31 @@ struct SecureAttachmentLoader: AttachmentLoader {
         guard await budget.reserve(bytes: data.count, policy: policy) else {
             throw Blocked.resourceLimitExceeded
         }
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-              let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.doubleValue,
-              let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.doubleValue,
-              width > 0,
-              height > 0,
-              width * height <= Double(policy.maximumImagePixels)
-        else { throw Blocked.invalidImage }
+        do {
+            guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+                  let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+                  let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.doubleValue,
+                  let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.doubleValue,
+                  width > 0,
+                  height > 0,
+                  width * height <= Double(policy.maximumImagePixels)
+            else { throw Blocked.invalidImage }
 
-        let rendered = try PreviewImageDecoder.renderedData(
-            from: data,
-            source: source,
-            pixelWidth: width,
-            pixelHeight: height
-        )
-        return LocalImageAttachment(
-            data: rendered.data,
-            description: text,
-            pixelSize: rendered.pixelSize
-        )
+            let rendered = try PreviewImageDecoder.renderedData(
+                from: data,
+                source: source,
+                pixelWidth: width,
+                pixelHeight: height
+            )
+            return LocalImageAttachment(
+                data: rendered.data,
+                description: text,
+                pixelSize: rendered.pixelSize
+            )
+        } catch {
+            await budget.release(bytes: data.count)
+            throw error
+        }
     }
 }
 
@@ -176,12 +250,38 @@ struct MarkdownAttachmentLoader: AttachmentLoader {
         environment: ColorEnvironmentValues
     ) async throws -> MarkdownImageAttachment {
         switch url.scheme?.lowercased() {
+        case "mermaid":
+            guard let source = MermaidSourceCodec.source(from: url),
+                  source.utf8.count <= policy.maximumMermaidSourceBytes,
+                  await local.budget.reserveMermaid(policy: policy)
+            else {
+                return .failure(L10n.string("Mermaid diagram is too large or exceeds the preview limit."))
+            }
+            do {
+                let attachment = try await MermaidDiagramRenderer.render(
+                    source: source,
+                    text: text,
+                    environment: environment,
+                    policy: policy
+                )
+                guard await local.budget.add(bytes: attachment.data.count, policy: policy) else {
+                    await local.budget.releaseMermaid()
+                    return .failure(L10n.string("Mermaid diagram is too large or exceeds the preview limit."))
+                }
+                return .mermaid(attachment)
+            } catch {
+                await local.budget.releaseMermaid()
+                return .failure(L10n.format("Mermaid diagram could not be rendered: %@", error.localizedDescription))
+            }
         case "http", "https":
             guard policy.allowsRemoteResource(url) else {
                 return .failure(L10n.string("Remote image loading is disabled."))
             }
             do {
-                let image = try await RemoteImageAttachmentLoader(policy: policy).attachment(
+                let image = try await RemoteImageAttachmentLoader(
+                    policy: policy,
+                    budget: local.budget
+                ).attachment(
                     for: url,
                     text: text,
                     environment: environment
@@ -202,11 +302,13 @@ struct MarkdownAttachmentLoader: AttachmentLoader {
 
 enum MarkdownImageAttachment: Attachment {
     case image(LocalImageAttachment)
+    case mermaid(MermaidImageAttachment)
     case failure(String)
 
     var description: String {
         switch self {
         case let .image(image): image.description
+        case let .mermaid(image): image.description
         case let .failure(message): message
         }
     }
@@ -215,6 +317,7 @@ enum MarkdownImageAttachment: Attachment {
     var body: some View {
         switch self {
         case let .image(image): image.body
+        case let .mermaid(image): image.body
         case let .failure(message):
             Label(message, systemImage: "photo.badge.exclamationmark")
                 .font(.callout)
@@ -230,15 +333,123 @@ enum MarkdownImageAttachment: Attachment {
     ) -> CGSize {
         switch self {
         case let .image(image): image.sizeThatFits(proposal, in: environment)
+        case let .mermaid(image): image.sizeThatFits(proposal, in: environment)
         case .failure: CGSize(width: min(proposal.width ?? 320, 480), height: 42)
         }
     }
 
-    func pngData() -> Data? { nil }
+    func pngData() -> Data? {
+        switch self {
+        case let .image(image): image.pngData()
+        case let .mermaid(image): image.pngData()
+        case .failure: nil
+        }
+    }
+}
+
+private enum MermaidDiagramRenderer {
+    private static let cache = MermaidImageCache()
+    private static let renderScale = 2.0
+
+    static func render(
+        source: String,
+        text: String,
+        environment: ColorEnvironmentValues,
+        policy: MarkdownPolicy
+    ) async throws -> MermaidImageAttachment {
+        let theme: DiagramTheme = environment.colorScheme == .dark ? .githubDark : .githubLight
+        let digest = SHA256.hash(data: Data(source.utf8))
+        let cacheKey = "\(environment.colorScheme == .dark ? "dark" : "light"):"
+            + digest.map { String(format: "%02x", $0) }.joined()
+        if let cached = await cache.value(for: cacheKey) {
+            guard policy.allowsMermaidImagePixels(
+                width: cached.pixelSize.width,
+                height: cached.pixelSize.height,
+                scale: renderScale
+            ),
+            cached.data.count <= policy.maximumAttachmentBytes
+            else {
+                throw SecureAttachmentLoader.Blocked.invalidImage
+            }
+            return MermaidImageAttachment(
+                data: cached.data,
+                description: text,
+                pixelSize: cached.pixelSize
+            )
+        }
+
+        let positioned = try await Task.detached {
+            try MermaidRenderer.layout(source)
+        }.value
+        guard policy.allowsMermaidImagePixels(
+            width: positioned.width,
+            height: positioned.height,
+            scale: renderScale
+        ) else {
+            throw SecureAttachmentLoader.Blocked.invalidImage
+        }
+
+        let renderer = MermaidImageRenderer(theme: theme)
+        renderer.scale = renderScale
+        guard let image = renderer.renderImage(from: positioned, scale: renderScale) else {
+            throw SecureAttachmentLoader.Blocked.invalidImage
+        }
+        let logicalSize = image.size
+        guard logicalSize.width > 0, logicalSize.height > 0,
+              let tiffData = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData),
+              let data = bitmap.representation(using: .png, properties: [:]),
+              bitmap.pixelsWide > 0,
+              bitmap.pixelsHigh > 0,
+              bitmap.pixelsWide * bitmap.pixelsHigh <= policy.maximumMermaidImagePixels,
+              data.count <= policy.maximumAttachmentBytes
+        else {
+            throw SecureAttachmentLoader.Blocked.invalidImage
+        }
+
+        let attachment = MermaidImageAttachment(
+            data: data,
+            description: text,
+            pixelSize: logicalSize
+        )
+        await cache.insert(attachment, for: cacheKey)
+        return attachment
+    }
+}
+
+private actor MermaidImageCache {
+    private var values: [String: MermaidImageAttachment] = [:]
+    private var insertionOrder: [String] = []
+    private var totalBytes = 0
+    private let maximumEntries = 8
+    private let maximumBytes = 16 * 1_024 * 1_024
+
+    func value(for key: String) -> MermaidImageAttachment? {
+        values[key]
+    }
+
+    func insert(_ attachment: MermaidImageAttachment, for key: String) {
+        guard attachment.data.count <= maximumBytes else { return }
+        if let previous = values.updateValue(attachment, forKey: key) {
+            totalBytes -= previous.data.count
+            insertionOrder.removeAll { $0 == key }
+        }
+        totalBytes += attachment.data.count
+        insertionOrder.append(key)
+
+        while insertionOrder.count > maximumEntries || totalBytes > maximumBytes {
+            guard let oldest = insertionOrder.first else { break }
+            insertionOrder.removeFirst()
+            if let removed = values.removeValue(forKey: oldest) {
+                totalBytes -= removed.data.count
+            }
+        }
+    }
 }
 
 private struct RemoteImageAttachmentLoader: AttachmentLoader {
     let policy: MarkdownPolicy
+    let budget: AttachmentBudget
 
     func attachment(
         for url: URL,
@@ -275,28 +486,36 @@ private struct RemoteImageAttachmentLoader: AttachmentLoader {
             data.append(byte)
         }
 
-        guard !data.isEmpty,
-              let source = CGImageSourceCreateWithData(data as CFData, nil),
-              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-              let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.doubleValue,
-              let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.doubleValue,
-              width > 0,
-              height > 0,
-              width * height <= Double(policy.maximumImagePixels)
-        else {
-            throw SecureAttachmentLoader.Blocked.invalidImage
+        guard await budget.reserve(bytes: data.count, policy: policy) else {
+            throw SecureAttachmentLoader.Blocked.resourceLimitExceeded
         }
+        do {
+            guard !data.isEmpty,
+                  let source = CGImageSourceCreateWithData(data as CFData, nil),
+                  let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+                  let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.doubleValue,
+                  let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.doubleValue,
+                  width > 0,
+                  height > 0,
+                  width * height <= Double(policy.maximumImagePixels)
+            else {
+                throw SecureAttachmentLoader.Blocked.invalidImage
+            }
 
-        let rendered = try PreviewImageDecoder.renderedData(
-            from: data,
-            source: source,
-            pixelWidth: width,
-            pixelHeight: height
-        )
-        return LocalImageAttachment(
-            data: rendered.data,
-            description: text,
-            pixelSize: rendered.pixelSize
-        )
+            let rendered = try PreviewImageDecoder.renderedData(
+                from: data,
+                source: source,
+                pixelWidth: width,
+                pixelHeight: height
+            )
+            return LocalImageAttachment(
+                data: rendered.data,
+                description: text,
+                pixelSize: rendered.pixelSize
+            )
+        } catch {
+            await budget.release(bytes: data.count)
+            throw error
+        }
     }
 }

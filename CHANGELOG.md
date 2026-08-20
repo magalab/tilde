@@ -5,6 +5,19 @@ tagged release is grouped under `Unreleased`.
 
 ## Unreleased
 
+## 0.4.0 - 2026-08-20
+
+- Add opt-in GFM-style task list checkboxes to the in-app Markdown preview.
+- Add LaTeX-style inline and block math rendering to the in-app preview.
+- Add Mermaid diagram rendering to the app preview and Finder Quick Look, with
+  source, count, pixel, attachment, and output budgets.
+- Keep Mermaid failures as safe code-block or failure fallbacks instead of
+  failing the complete Markdown preview.
+- Preserve preview layout across editor/preview mode changes and avoid
+  modifying task markers inside indented code blocks or blockquotes.
+- Add cache, budget, policy, blockquote, nested-list, and rendering regression
+  coverage for the new Markdown features.
+
 ## 0.3.0 - 2026-08-12
 
 - Add copy controls and language labels to fenced Markdown code blocks.

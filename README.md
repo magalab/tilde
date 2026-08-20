@@ -23,6 +23,14 @@ and tests. The Xcode project in `Host/` only packages those products into the
 macOS app and Quick Look extension; see [the architecture guide](docs/architecture.md)
 for the boundary in more detail.
 
+## Markdown preview support
+
+The app preview supports GFM-style task lists, inline and block math, fenced
+code blocks, and Mermaid diagrams. Mermaid diagrams are also available in
+Finder Quick Look. Preview rendering applies bounded source, output, image,
+attachment, and Mermaid-specific budgets; unsupported or over-budget diagrams
+fall back safely without preventing the rest of the document from rendering.
+
 ## Development with SwiftPM
 
 Swift Package Manager owns all application logic, reusable UI, dependencies,

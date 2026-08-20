@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import XCTest
 @testable import TildeCore
 @testable import TildeDocument
@@ -12,6 +13,80 @@ final class MarkdownPreviewModelTests: XCTestCase {
 
         let prepared = try XCTUnwrap(model.prepared)
         XCTAssertFalse(prepared.attributedString.runs.contains { $0.link != nil })
+    }
+
+    func testMathSyntaxIsExpandedIntoTextualAttachment() async throws {
+        let model = MarkdownPreviewModel()
+        await model.render(snapshot: snapshot("The area is $A = \\pi r^2$."))
+
+        let prepared = try XCTUnwrap(model.prepared)
+        XCTAssertTrue(String(prepared.attributedString.characters).contains("\u{FFFC}"))
+    }
+
+    func testMermaidFenceIsPreparedAsAnImageAttachment() async throws {
+        let model = MarkdownPreviewModel()
+        await model.render(snapshot: snapshot("```mermaid\ngraph TD\nA-->B\n```"))
+
+        let prepared = try XCTUnwrap(model.prepared)
+        XCTAssertTrue(prepared.attributedString.runs.contains { run in
+            run.imageURL?.scheme == "mermaid"
+        })
+    }
+
+    func testTaskListMarkersRemainVisibleWithMathSyntaxExtension() async throws {
+        let model = MarkdownPreviewModel()
+        await model.render(snapshot: snapshot("- [x] done\n- [ ] todo"))
+
+        let prepared = try XCTUnwrap(model.prepared)
+        let text = String(prepared.attributedString.characters)
+        XCTAssertTrue(text.contains("☑ done"))
+        XCTAssertTrue(text.contains("☐ todo"))
+    }
+
+    func testMermaidAttachmentUsesLogicalSizeForLayout() {
+        let attachment = MermaidImageAttachment(
+            data: Data(),
+            description: "diagram",
+            pixelSize: CGSize(width: 200, height: 100)
+        )
+
+        XCTAssertEqual(
+            attachment.sizeThatFits(ProposedViewSize(width: 300, height: nil)),
+            CGSize(width: 200, height: 100)
+        )
+        XCTAssertEqual(
+            attachment.sizeThatFits(ProposedViewSize(width: 80, height: nil)),
+            CGSize(width: 80, height: 40)
+        )
+    }
+
+    func testMermaidWrapperPassesThroughPNGData() {
+        let data = Data([0x89, 0x50, 0x4E, 0x47])
+        let attachment = MermaidImageAttachment(
+            data: data,
+            description: "diagram",
+            pixelSize: CGSize(width: 2, height: 1)
+        )
+
+        XCTAssertEqual(MarkdownImageAttachment.mermaid(attachment).pngData(), data)
+    }
+
+    func testMermaidBudgetReleasesFailedReservationAndSharesByteLimit() async {
+        let budget = AttachmentBudget()
+        var policy = MarkdownPolicy.default
+        policy.maximumMermaidDiagramCount = 1
+        policy.maximumAttachmentBytes = 4
+
+        let firstReservation = await budget.reserveMermaid(policy: policy)
+        let secondReservation = await budget.reserveMermaid(policy: policy)
+        let oversizedAddition = await budget.add(bytes: 5, policy: policy)
+        XCTAssertTrue(firstReservation)
+        XCTAssertFalse(secondReservation)
+        XCTAssertFalse(oversizedAddition)
+
+        await budget.releaseMermaid()
+        let reservationAfterRelease = await budget.reserveMermaid(policy: policy)
+        XCTAssertTrue(reservationAfterRelease)
     }
 
     func testSourceBudgetStopsRender() async {
