@@ -1,4 +1,5 @@
 import AppKit
+import OSLog
 import SwiftUI
 import TildeCore
 import TildeDocument
@@ -15,6 +16,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var outlineWindowController: NSWindowController?
     var quickOpenWindowController: NSWindowController?
     private var receivedOpenURLs = false
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "tech.lury.tilde",
+        category: "CommandLine"
+    )
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         documentController.newDocumentMetadataProvider = { [settings] in
@@ -46,7 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if requests.isEmpty {
                     self.restoreLastSessionIfNeeded()
                 } else {
-                    self.open(commandLineRequests: requests)
+                    self.openCommandLineRequestsAtStartup(requests)
                 }
             }
         }
@@ -57,26 +62,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        // Persist bookmarks before releasing document-owned security scopes.
         restoreStore.replace(
             with: documentController.documents.compactMap { ($0 as? TextDocument)?.fileURL }
         )
+        documentController.releaseRetainedSecurityScopedAccess()
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
         receivedOpenURLs = true
-        open(commandLineRequests: urls.compactMap(Self.request(from:)))
-        for url in urls where url.isFileURL {
+        let commandLineRequests = urls.compactMap(Self.request(from:))
+        let fileURLs = urls.filter(\.isFileURL)
+        let requestsByFile = Dictionary(
+            grouping: commandLineRequests,
+            by: { fileKey(for: URL(fileURLWithPath: $0.path)) }
+        )
+        let fileKeys = Set(fileURLs.map(fileKey(for:)))
+        open(commandLineRequests: commandLineRequests.filter {
+            !fileKeys.contains(fileKey(for: URL(fileURLWithPath: $0.path)))
+        })
+
+        for url in fileURLs {
+            let requests = requestsByFile[fileKey(for: url)] ?? []
             documentController.openDocument(
                 withContentsOf: url,
-                display: true,
-                completionHandler: { _, _, error in
+                display: !requests.contains(where: { $0.newWindow }),
+                completionHandler: { [weak self] document, wasAlreadyOpen, error in
                     if let error {
                         NSApp.presentError(error)
+                        return
+                    }
+                    guard let self, let document = document as? TextDocument else {
+                        return
+                    }
+                    self.restoreStore.merge(with: [url])
+                    let key = self.fileKey(for: url)
+                    for request in requestsByFile[key] ?? [] {
+                        self.applyCommandLineRequest(
+                            request,
+                            to: document,
+                            wasAlreadyOpen: wasAlreadyOpen
+                        )
                     }
                 }
-            )
-            restoreStore.replace(
-                with: documentController.documents.compactMap { ($0 as? TextDocument)?.fileURL } + [url]
             )
             recentProjects.record(url.deletingLastPathComponent())
         }
@@ -157,7 +185,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func restoreLastSessionIfNeeded() {
-        let urls = restoreStore.urls
+        let urls = restoreStore.loadURLs()
         if urls.isEmpty {
             documentController.newDocument(nil)
             return
@@ -372,56 +400,124 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func open(commandLineRequests requests: [TildeOpenRequest]) {
         for request in requests {
-            let url = URL(fileURLWithPath: request.path)
-            do {
-                try createFileIfNeeded(at: url)
-            } catch {
-                NSApp.presentError(error)
+            let key = fileKey(for: URL(fileURLWithPath: request.path))
+            guard let document = documentController.documents
+                .compactMap({ $0 as? TextDocument })
+                .first(where: { fileKey(for: $0.fileURL) == key })
+            else {
+                logger.warning("Dropping command-line metadata because document is not open: \(request.path, privacy: .public)")
                 continue
             }
+            applyCommandLineRequest(
+                request,
+                to: document,
+                wasAlreadyOpen: true
+            )
+        }
+    }
 
-            documentController.openDocument(
-                withContentsOf: url,
-                display: !request.newWindow
-            ) { document, _, error in
-                if let error {
-                    NSApp.presentError(error)
-                    return
-                }
-                guard let document else { return }
-                if let fileURL = document.fileURL {
-                    self.restoreStore.replace(
-                        with: self.documentController.documents.compactMap { ($0 as? TextDocument)?.fileURL }
-                    )
-                    self.recentProjects.record(fileURL.deletingLastPathComponent())
-                }
-                if request.newWindow {
-                    document.makeWindowControllers()
-                    document.windowControllers.forEach { controller in
-                        controller.window?.tabbingMode = .disallowed
-                    }
-                    document.showWindows()
-                }
-                guard let line = request.line else { return }
-                DispatchQueue.main.async {
-                    let window = document.windowControllers.first?.window
-                    self.findEditorTextView(in: window?.contentView)?.goToLine(line)
-                }
+    private func openCommandLineRequestsAtStartup(_ requests: [TildeOpenRequest]) {
+        let urls = requests.flatMap { request -> [URL] in
+            let fileURL = URL(fileURLWithPath: request.path)
+            guard let metadataURL = commandLineMetadataURL(for: request) else {
+                return [fileURL]
+            }
+            return [fileURL, metadataURL]
+        }
+        guard let applicationURL = applicationURLForLaunchServices() else {
+            // SwiftPM's development executable is not an .app and therefore
+            // cannot be routed back through Launch Services. It is not
+            // sandboxed, so open the requests directly instead.
+            openCommandLineRequestsDirectly(requests)
+            return
+        }
+        NSWorkspace.shared.open(
+            urls,
+            withApplicationAt: applicationURL,
+            configuration: NSWorkspace.OpenConfiguration()
+        ) { [weak self] _, error in
+            guard let error else { return }
+            DispatchQueue.main.async {
+                self?.logger.error("Could not route startup command-line files: \(error.localizedDescription, privacy: .public)")
+                NSApp.presentError(error)
+                guard self?.receivedOpenURLs == false else { return }
+                self?.restoreLastSessionIfNeeded()
             }
         }
     }
 
-    private func createFileIfNeeded(at url: URL) throws {
-        var isDirectory: ObjCBool = false
-        if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) {
-            if isDirectory.boolValue {
-                throw CocoaError(.fileReadUnknown, userInfo: [NSURLErrorKey: url])
+    private func applicationURLForLaunchServices() -> URL? {
+        let bundleURL = Bundle.main.bundleURL
+        if bundleURL.pathExtension == "app" {
+            return bundleURL
+        }
+        return nil
+    }
+
+    private func openCommandLineRequestsDirectly(_ requests: [TildeOpenRequest]) {
+        for request in requests {
+            let url = URL(fileURLWithPath: request.path)
+            documentController.openDocument(
+                withContentsOf: url,
+                display: !request.newWindow,
+                completionHandler: { [weak self] document, wasAlreadyOpen, error in
+                    if let error {
+                        NSApp.presentError(error)
+                        return
+                    }
+                    guard let self, let document = document as? TextDocument else {
+                        return
+                    }
+                    self.applyCommandLineRequest(
+                        request,
+                        to: document,
+                        wasAlreadyOpen: wasAlreadyOpen
+                    )
+                    self.recentProjects.record(url.deletingLastPathComponent())
+                }
+            )
+        }
+    }
+
+    private func applyCommandLineRequest(
+        _ request: TildeOpenRequest,
+        to document: TextDocument,
+        wasAlreadyOpen: Bool
+    ) {
+        if request.newWindow {
+            if wasAlreadyOpen || document.windowControllers.isEmpty {
+                document.makeWindowControllers()
             }
-            return
+            document.windowControllers.forEach { controller in
+                controller.window?.tabbingMode = .disallowed
+            }
+            document.showWindows()
         }
-        guard FileManager.default.createFile(atPath: url.path, contents: Data()) else {
-            throw CocoaError(.fileNoSuchFile, userInfo: [NSURLErrorKey: url])
+        guard let line = request.line else { return }
+        DispatchQueue.main.async {
+            let window = document.windowControllers.last?.window
+            self.findEditorTextView(in: window?.contentView)?.goToLine(line)
         }
+    }
+
+    private func commandLineMetadataURL(for request: TildeOpenRequest) -> URL? {
+        guard request.line != nil || request.newWindow else { return nil }
+        var components = URLComponents()
+        components.scheme = "tilde"
+        components.host = "open"
+        var queryItems = [URLQueryItem(name: "path", value: request.path)]
+        if let line = request.line {
+            queryItems.append(URLQueryItem(name: "line", value: String(line)))
+        }
+        if request.newWindow {
+            queryItems.append(URLQueryItem(name: "newWindow", value: "1"))
+        }
+        components.queryItems = queryItems
+        return components.url
+    }
+
+    private func fileKey(for url: URL?) -> String {
+        url?.standardizedFileURL.path ?? ""
     }
 
     private static func request(from url: URL) -> TildeOpenRequest? {

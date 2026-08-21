@@ -53,37 +53,95 @@ public final class TextDocumentController: NSDocumentController {
         display displayDocument: Bool,
         completionHandler: @escaping (NSDocument?, Bool, Error?) -> Void
     ) {
+        let securityScopedAccess = SecurityScopedAccess(url: url)
+
         super.openDocument(withContentsOf: url, display: displayDocument) { [weak self] document, wasAlreadyOpen, error in
-            guard let self,
-                  let error,
-                  self.shouldOfferEncodingChooser(for: error)
-            else {
+            guard let self else {
                 completionHandler(document, wasAlreadyOpen, error)
                 return
             }
 
-            guard let encoding = self.chooseEncoding(for: url) else {
-                completionHandler(nil, false, error)
+            if let error, self.shouldOfferEncodingChooser(for: error) {
+                guard let encoding = self.chooseEncoding(for: url) else {
+                    completionHandler(nil, false, error)
+                    return
+                }
+
+                do {
+                    let document = try self.openDocument(
+                        at: url,
+                        using: encoding,
+                        display: displayDocument,
+                        securityScopedAccess: securityScopedAccess,
+                        installFileURLChangeHandler: true
+                    )
+                    completionHandler(document, false, nil)
+                } catch {
+                    completionHandler(nil, false, error)
+                }
                 return
             }
 
-            do {
-                let document = try self.openDocument(
-                    at: url,
-                    using: encoding,
-                    display: displayDocument
-                )
-                completionHandler(document, false, nil)
-            } catch {
-                completionHandler(nil, false, error)
+            guard let document else {
+                completionHandler(nil, wasAlreadyOpen, error)
+                return
             }
+
+            if wasAlreadyOpen {
+                completionHandler(document, wasAlreadyOpen, error)
+                return
+            }
+
+            if securityScopedAccess.isActive {
+                configure(document: document)
+                retainSecurityScopedAccess(
+                    for: document,
+                    access: securityScopedAccess
+                )
+            }
+            completionHandler(document, wasAlreadyOpen, error)
         }
+    }
+
+    public override func removeDocument(_ document: NSDocument) {
+        (document as? TextDocument)?.releaseSecurityScopedAccess()
+        super.removeDocument(document)
+    }
+
+    /// Releases any remaining file access during application termination.
+    ///
+    /// Normal document closure is handled by removeDocument(_:); this is only a
+    /// final safety net for documents still open while the application exits.
+    public func releaseRetainedSecurityScopedAccess() {
+        documents
+            .compactMap { $0 as? TextDocument }
+            .forEach { $0.releaseSecurityScopedAccess() }
     }
 
     public func openDocument(
         at url: URL,
         using encoding: TextEncoding,
         display: Bool
+    ) throws -> TextDocument {
+        try openDocument(
+            at: url,
+            using: encoding,
+            display: display,
+            securityScopedAccess: nil,
+            installFileURLChangeHandler: false
+        )
+    }
+
+    func documentFileURLDidChange(_ document: TextDocument) {
+        document.releaseSecurityScopedAccessIfFileURLChanged()
+    }
+
+    private func openDocument(
+        at url: URL,
+        using encoding: TextEncoding,
+        display: Bool,
+        securityScopedAccess: SecurityScopedAccess?,
+        installFileURLChangeHandler: Bool
     ) throws -> TextDocument {
         let typeName = try typeForContents(of: url)
         let data = try Data(contentsOf: url, options: [.mappedIfSafe])
@@ -93,11 +151,34 @@ public final class TextDocumentController: NSDocumentController {
         try document.read(from: data, ofType: typeName, using: encoding)
         addDocument(document)
         noteNewRecentDocumentURL(url)
+        if installFileURLChangeHandler {
+            configure(document: document)
+        }
+        if let securityScopedAccess, securityScopedAccess.isActive {
+            retainSecurityScopedAccess(
+                for: document,
+                access: securityScopedAccess
+            )
+        }
         if display {
             document.makeWindowControllers()
             document.showWindows()
         }
         return document
+    }
+
+    private func configure(document: NSDocument) {
+        guard let document = document as? TextDocument else { return }
+        document.fileURLDidChangeHandler = { [weak self] changedDocument in
+            self?.documentFileURLDidChange(changedDocument)
+        }
+    }
+
+    private func retainSecurityScopedAccess(
+        for document: NSDocument,
+        access: SecurityScopedAccess
+    ) {
+        (document as? TextDocument)?.retainSecurityScopedAccess(access)
     }
 
     private func chooseEncoding(for url: URL) -> TextEncoding? {
@@ -134,5 +215,25 @@ public final class TextDocumentController: NSDocumentController {
             return shouldOfferEncodingChooser(for: underlying)
         }
         return false
+    }
+}
+
+final class SecurityScopedAccess {
+    let url: URL
+    private(set) var isActive: Bool
+
+    init(url: URL) {
+        self.url = url
+        isActive = url.startAccessingSecurityScopedResource()
+    }
+
+    func stop() {
+        guard isActive else { return }
+        url.stopAccessingSecurityScopedResource()
+        isActive = false
+    }
+
+    deinit {
+        stop()
     }
 }
