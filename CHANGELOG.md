@@ -5,6 +5,17 @@ tagged release is grouped under `Unreleased`.
 
 ## Unreleased
 
+## 0.5.0 - 2026-08-21
+
+- Preserve document restore sessions with app-scoped security bookmarks,
+  including files on temporarily unavailable external volumes.
+- Release document security-scoped access when documents close or change URL,
+  with termination cleanup as a final safeguard.
+- Keep command-line file opens, line navigation, and separate-window metadata
+  associated with their corresponding file URLs.
+- Bound and clean restore-session entries, retry legacy bookmarks, and add
+  regression coverage for session persistence edge cases.
+
 ## 0.4.0 - 2026-08-20
 
 - Add opt-in GFM-style task list checkboxes to the in-app Markdown preview.

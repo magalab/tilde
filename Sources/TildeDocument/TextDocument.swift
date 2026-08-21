@@ -16,6 +16,8 @@ public final class TextDocument: NSDocument, @preconcurrency ObservableObject {
     public private(set) var externalChangeState: ExternalChangeState = .unchanged
     public private(set) var lineIndex: LineIndex
     public private(set) var workingUTF8ByteCount: Int = 0
+    var fileURLDidChangeHandler: (@MainActor (TextDocument) -> Void)?
+    private var securityScopedAccess: SecurityScopedAccess?
 
     private var loadedRevision: UInt64 = 0
     private var originalData: Data?
@@ -131,10 +133,32 @@ public final class TextDocument: NSDocument, @preconcurrency ObservableObject {
                     } else {
                         self?.pendingWrittenBaseline = nil
                     }
+                    if error == nil, let self {
+                        self.fileURLDidChangeHandler?(self)
+                    }
                     completionHandler(error)
                 }
             }
         )
+    }
+
+    func retainSecurityScopedAccess(_ access: SecurityScopedAccess) {
+        securityScopedAccess = access
+    }
+
+    func releaseSecurityScopedAccess() {
+        securityScopedAccess?.stop()
+        securityScopedAccess = nil
+    }
+
+    func releaseSecurityScopedAccessIfFileURLChanged() {
+        guard let securityScopedAccess,
+              let fileURL,
+              securityScopedAccess.url.standardizedFileURL != fileURL.standardizedFileURL
+        else {
+            return
+        }
+        releaseSecurityScopedAccess()
     }
 
     public override func data(ofType typeName: String) throws -> Data {

@@ -47,6 +47,12 @@ renderer or UI modules.
 
 The app sandbox permits user-selected read/write access. The extension has its
 own sandbox entitlement and obtains file access from the Quick Look request.
+The app also uses app-scoped security bookmarks for restoring documents across
+launches; document-scoped bookmarks are not persisted because the restore
+bookmarks belong to the app's own store. Each open document retains its live
+security-scoped access token for as long as it is open. Open-document scopes
+are released when the document controller removes the document or the document
+gets a new file URL, with termination cleanup retained as a final safety net.
 Release builds retain the hardened runtime; local smoke builds use ad-hoc
 signing.
 
