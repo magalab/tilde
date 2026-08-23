@@ -27,25 +27,36 @@ public final class TextDocumentController: NSDocumentController {
         TildeDocumentType.type(for: url)
     }
 
+    // NSDocumentController requires `throws` in this override even though this concrete
+    // document factory has no failing operations.
     public override func makeUntitledDocument(ofType typeName: String) throws -> NSDocument {
+        makeTextUntitledDocument(ofType: typeName)
+    }
+
+    private func makeTextUntitledDocument(ofType typeName: String) -> TextDocument {
         let document = TextDocument()
         document.fileType = typeName
         document.configureNewDocument(metadata: newDocumentMetadataProvider())
         return document
     }
 
-    public func newDocumentInSeparateWindow() {
-        do {
-            let document = try makeUntitledDocument(ofType: defaultType ?? TildeDocumentType.plainText)
-            addDocument(document)
-            document.makeWindowControllers()
+    public func makeAndShowUntitledDocument(disallowTabbing: Bool = false) -> TextDocument {
+        let document = makeTextUntitledDocument(
+            ofType: defaultType ?? TildeDocumentType.plainText
+        )
+        addDocument(document)
+        document.makeWindowControllers()
+        if disallowTabbing {
             document.windowControllers.forEach { controller in
                 controller.window?.tabbingMode = .disallowed
             }
-            document.showWindows()
-        } catch {
-            NSApp.presentError(error)
         }
+        document.showWindows()
+        return document
+    }
+
+    public func newDocumentInSeparateWindow() {
+        _ = makeAndShowUntitledDocument(disallowTabbing: true)
     }
 
     public override func openDocument(

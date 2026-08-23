@@ -15,7 +15,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var commandPaletteWindowController: NSWindowController?
     var outlineWindowController: NSWindowController?
     var quickOpenWindowController: NSWindowController?
+    // Prevents delayed session restoration from creating a fallback document after
+    // Finder or Launch Services has already delivered an open-file request. The
+    // application(_:open:) entry point must set this synchronously before dispatching
+    // any file-opening work.
     private var receivedOpenURLs = false
+    private var startupUntitledDocument: TextDocument?
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "tech.lury.tilde",
         category: "CommandLine"
@@ -71,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func application(_ application: NSApplication, open urls: [URL]) {
         receivedOpenURLs = true
+        discardStartupUntitledDocumentIfNeeded()
         let commandLineRequests = urls.compactMap(Self.request(from:))
         let fileURLs = urls.filter(\.isFileURL)
         let requestsByFile = Dictionary(
@@ -95,6 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     guard let self, let document = document as? TextDocument else {
                         return
                     }
+                    self.discardStartupUntitledDocumentIfNeeded()
                     self.restoreStore.merge(with: [url])
                     let key = self.fileKey(for: url)
                     for request in requestsByFile[key] ?? [] {
@@ -187,7 +194,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func restoreLastSessionIfNeeded() {
         let urls = restoreStore.loadURLs()
         if urls.isEmpty {
-            documentController.newDocument(nil)
+            startupUntitledDocument = documentController.makeAndShowUntitledDocument()
             return
         }
         for url in urls {
@@ -205,6 +212,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             )
         }
+    }
+
+    /// The launch-time blank document is only a fallback for a plain app launch. Finder can
+    /// deliver an open-file event just after launch, so remove that fallback before displaying
+    /// the requested file instead of leaving an extra focused tab behind.
+    private func discardStartupUntitledDocumentIfNeeded() {
+        guard let document = startupUntitledDocument else { return }
+        startupUntitledDocument = nil
+
+        guard documentController.documents.contains(where: { $0 === document }),
+              document.isUntitledAndUnmodified
+        else { return }
+        document.windowControllers.forEach { $0.close() }
+        documentController.removeDocument(document)
     }
 
     private func quickOpenCandidates(in directory: URL) -> [QuickOpenCandidate] {

@@ -43,6 +43,9 @@ let package = Package(
             dependencies: ["TildeCore"]
         ),
         .target(
+            name: "TildeImage"
+        ),
+        .target(
             name: "TildeEditor",
             dependencies: ["TildeCore", "TildeDocument"]
         ),
@@ -51,6 +54,7 @@ let package = Package(
             dependencies: [
                 "TildeCore",
                 "TildeDocument",
+                "TildeImage",
                 .product(name: "Textual", package: "textual"),
                 .product(name: "BeautifulMermaid", package: "beautiful-mermaid-swift"),
             ]
@@ -59,6 +63,7 @@ let package = Package(
             name: "TildeQuickLook",
             dependencies: [
                 "TildeCore",
+                "TildeImage",
                 .product(name: "Markdown", package: "swift-markdown"),
                 .product(name: "BeautifulMermaid", package: "beautiful-mermaid-swift"),
             ]
@@ -107,7 +112,11 @@ let package = Package(
         ),
         .testTarget(
             name: "TildeQuickLookTests",
-            dependencies: ["TildeCore", "TildeQuickLook"]
+            dependencies: [
+                "TildeCore",
+                "TildeQuickLook",
+                .product(name: "Markdown", package: "swift-markdown"),
+            ]
         ),
     ],
     swiftLanguageModes: [.v6]

@@ -5,6 +5,20 @@ tagged release is grouped under `Unreleased`.
 
 ## Unreleased
 
+## 0.5.1 - 2026-08-23
+
+- Prevent Finder and Launch Services opens from leaving an extra focused
+  untitled document behind during app startup.
+- Render Quick Look task-list checkboxes when a list item begins with a
+  non-paragraph block, and preserve checkbox behavior across empty and
+  multiple-paragraph items.
+- Render supported inline and display math as MathML while keeping code and
+  currency dollar signs literal, with safer handling for incomplete formulas.
+- Correct Mermaid diagram orientation and share high-resolution image
+  transformation logic between the app preview and Quick Look.
+- Add regression coverage for Markdown rendering, math boundaries, task
+  markers, and cross-node parsing behavior.
+
 ## 0.5.0 - 2026-08-21
 
 - Preserve document restore sessions with app-scoped security bookmarks,

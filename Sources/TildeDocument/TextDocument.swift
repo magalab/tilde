@@ -249,6 +249,11 @@ public final class TextDocument: NSDocument, @preconcurrency ObservableObject {
         return FileManager.default.isWritableFile(atPath: fileURL.path)
     }
 
+    /// Whether this is the untouched fallback document created during app launch.
+    public var isUntitledAndUnmodified: Bool {
+        fileURL == nil && !hasUnsavedChanges
+    }
+
     public func changeEncoding(to encoding: DetectedEncoding) {
         guard canModifyDocumentSettings, metadata.encoding != encoding else { return }
         metadata.encoding = encoding

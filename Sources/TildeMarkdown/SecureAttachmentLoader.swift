@@ -5,6 +5,7 @@ import ImageIO
 import SwiftUI
 import Textual
 import TildeCore
+import TildeImage
 import UniformTypeIdentifiers
 
 struct LocalImageAttachment: Attachment {
@@ -391,7 +392,13 @@ private enum MermaidDiagramRenderer {
 
         let renderer = MermaidImageRenderer(theme: theme)
         renderer.scale = renderScale
-        guard let image = renderer.renderImage(from: positioned, scale: renderScale) else {
+        guard let renderedImage = renderer.renderImage(from: positioned, scale: renderScale) else {
+            throw SecureAttachmentLoader.Blocked.invalidImage
+        }
+        guard let image = ImageTransform.verticallyFlipped(
+            renderedImage,
+            scale: renderScale
+        ) else {
             throw SecureAttachmentLoader.Blocked.invalidImage
         }
         let logicalSize = image.size
