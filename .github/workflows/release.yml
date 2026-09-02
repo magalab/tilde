@@ -125,7 +125,7 @@ jobs:
 
             url "https://github.com/${{ github.repository }}/releases/download/__TAG__/Tilde_#{version}_arm64.dmg"
             name "Tilde"
-            desc "Native macOS text editor for plain text and Markdown"
+            desc "Native text editor for plain text and Markdown"
             homepage "https://github.com/${{ github.repository }}"
 
             depends_on macos: :sequoia
