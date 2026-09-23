@@ -45,6 +45,7 @@ public final class TextDocumentController: NSDocumentController {
             ofType: defaultType ?? TildeDocumentType.plainText
         )
         addDocument(document)
+        configure(document: document)
         document.makeWindowControllers()
         if disallowTabbing {
             document.windowControllers.forEach { controller in
@@ -145,6 +146,9 @@ public final class TextDocumentController: NSDocumentController {
 
     func documentFileURLDidChange(_ document: TextDocument) {
         document.releaseSecurityScopedAccessIfFileURLChanged()
+        document.windowControllers.forEach { controller in
+            controller.window?.isRestorable = document.fileURL != nil
+        }
     }
 
     private func openDocument(

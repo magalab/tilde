@@ -17,10 +17,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var quickOpenWindowController: NSWindowController?
     // Prevents delayed session restoration from creating a fallback document after
     // Finder or Launch Services has already delivered an open-file request. The
-    // application(_:open:) entry point must set this synchronously before dispatching
-    // any file-opening work.
+    // application(_:open:) entry point must set this synchronously before
+    // dispatching any custom URL-opening work.
     private var receivedOpenURLs = false
-    private var startupUntitledDocument: TextDocument?
+    private var hasStartupUntitledDocument = false
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "tech.lury.tilde",
         category: "CommandLine"
@@ -48,15 +48,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        let launchValue = notification.userInfo?[NSApplication.launchIsDefaultUserInfoKey] as? NSNumber
+        let isDefaultLaunch = launchValue?.boolValue ?? true
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             let requests = TildeCommandLine.parse(Array(CommandLine.arguments.dropFirst()))
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 guard !self.receivedOpenURLs else { return }
-                if requests.isEmpty {
+                if requests.isEmpty, isDefaultLaunch {
                     self.restoreLastSessionIfNeeded()
-                } else {
+                } else if !requests.isEmpty {
                     self.openCommandLineRequestsAtStartup(requests)
+                } else {
+                    self.removeCleanUntitledDocumentsIfFileIsOpen()
                 }
             }
         }
@@ -77,6 +81,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func application(_ application: NSApplication, open urls: [URL]) {
         receivedOpenURLs = true
         discardStartupUntitledDocumentIfNeeded()
+        handleOpenRequests(urls)
+    }
+
+    private func handleOpenRequests(_ urls: [URL]) {
         let commandLineRequests = urls.compactMap(Self.request(from:))
         let fileURLs = urls.filter(\.isFileURL)
         let requestsByFile = Dictionary(
@@ -192,11 +200,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func restoreLastSessionIfNeeded() {
-        let urls = restoreStore.loadURLs()
-        if urls.isEmpty {
-            startupUntitledDocument = documentController.makeAndShowUntitledDocument()
+        // Launch Services may have already opened a file through NSDocumentController
+        // before the delayed startup fallback runs. In that case creating the normal
+        // fallback document would leave an extra Untitled tab behind.
+        if documentController.documents.contains(where: { document in
+            (document as? TextDocument)?.fileURL != nil
+        }) {
+            hasStartupUntitledDocument = hasCleanUntitledDocument
+            discardStartupUntitledDocumentIfNeeded()
             return
         }
+
+        let urls = restoreStore.loadURLs()
+        if urls.isEmpty {
+            if !hasCleanUntitledDocument {
+                _ = documentController.makeAndShowUntitledDocument()
+            }
+            hasStartupUntitledDocument = true
+            return
+        }
+
+        // Remove stale clean Untitled windows restored by AppKit before restoring
+        // the persisted file session.
+        hasStartupUntitledDocument = hasCleanUntitledDocument
+        discardStartupUntitledDocumentIfNeeded()
+
         for url in urls {
             documentController.openDocument(
                 withContentsOf: url,
@@ -218,14 +246,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// deliver an open-file event just after launch, so remove that fallback before displaying
     /// the requested file instead of leaving an extra focused tab behind.
     private func discardStartupUntitledDocumentIfNeeded() {
-        guard let document = startupUntitledDocument else { return }
-        startupUntitledDocument = nil
+        guard hasStartupUntitledDocument else { return }
+        hasStartupUntitledDocument = false
 
-        guard documentController.documents.contains(where: { $0 === document }),
-              document.isUntitledAndUnmodified
-        else { return }
-        document.windowControllers.forEach { $0.close() }
-        documentController.removeDocument(document)
+        removeCleanUntitledDocuments()
+    }
+
+    private var hasCleanUntitledDocument: Bool {
+        documentController.documents.contains { document in
+            (document as? TextDocument)?.isUntitledAndUnmodified == true
+        }
+    }
+
+    private func removeCleanUntitledDocumentsIfFileIsOpen(retriesRemaining: Int = 5) {
+        guard documentController.documents.contains(where: { document in
+            (document as? TextDocument)?.fileURL != nil
+        }) else {
+            guard retriesRemaining > 0 else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.removeCleanUntitledDocumentsIfFileIsOpen(
+                    retriesRemaining: retriesRemaining - 1
+                )
+            }
+            return
+        }
+        removeCleanUntitledDocuments()
+    }
+
+    private func removeCleanUntitledDocuments() {
+        let documents = documentController.documents
+            .compactMap { $0 as? TextDocument }
+            .filter(\.isUntitledAndUnmodified)
+        for document in documents {
+            document.windowControllers.forEach { $0.close() }
+            documentController.removeDocument(document)
+        }
     }
 
     private func quickOpenCandidates(in directory: URL) -> [QuickOpenCandidate] {

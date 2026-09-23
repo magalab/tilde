@@ -17,7 +17,10 @@ final class DocumentWindowController: NSWindowController {
         window.styleMask.formUnion([.titled, .closable, .miniaturizable, .resizable])
         window.titleVisibility = .visible
         window.tabbingMode = .preferred
-        window.isRestorable = true
+        // Untitled documents are only a launch fallback or an explicitly created
+        // scratch tab. Letting AppKit restore them makes a cold file launch reopen
+        // stale blank tabs alongside the requested document.
+        window.isRestorable = document.fileURL != nil
         if let fileURL = document.fileURL {
             let encodedPath = Data(fileURL.standardizedFileURL.path.utf8)
                 .base64EncodedString()
