@@ -5,6 +5,15 @@ tagged release is grouped under `Unreleased`.
 
 ## Unreleased
 
+## 0.5.2 - 2026-09-27
+
+- Prevent Finder and Launch Services file opens from creating duplicate Untitled
+  tabs during a cold launch.
+- Clean stale blank startup documents without removing edited Untitled documents.
+- Keep window restoration state synchronized when an Untitled document is saved
+  as a file.
+- Keep the Homebrew cask description platform neutral.
+
 ## 0.5.1 - 2026-08-23
 
 - Prevent Finder and Launch Services opens from leaving an extra focused
