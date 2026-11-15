@@ -5,6 +5,14 @@ tagged release is grouped under `Unreleased`.
 
 ## Unreleased
 
+## 0.5.3 - 2026-11-15
+
+- Bound unwrapped TextKit layout width to avoid pathological memory use for
+  very long lines while preserving horizontal scrolling.
+- Release layout managers for inactive AppKit tabs and rebuild them when a tab
+  becomes active, reducing retained editor layout state without discarding text
+  or undo history.
+
 ## 0.5.2 - 2026-09-27
 
 - Prevent Finder and Launch Services file opens from creating duplicate Untitled

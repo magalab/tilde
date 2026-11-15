@@ -4,6 +4,13 @@ import TildeCore
 import TildeDocument
 
 public struct EditorView: NSViewRepresentable {
+    /// Keep unwrapped text finite so TextKit does not try to measure a very
+    /// long single line across an effectively infinite layout width.
+    ///
+    /// A finite width still preserves horizontal scrolling while avoiding the
+    /// pathological layout cost of an unbounded paragraph.
+    public static let unwrappedLineWidth: CGFloat = 16_000
+
     public let document: TextDocument
     public let session: EditorSession
     @Bindable private var settings: EditorSettings
@@ -25,7 +32,10 @@ public struct EditorView: NSViewRepresentable {
     public func makeNSView(context: Context) -> NSScrollView {
         let layoutManager = NSLayoutManager()
         let textContainer = NSTextContainer(
-            containerSize: NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
+            containerSize: NSSize(
+                width: Self.unwrappedLineWidth,
+                height: CGFloat.greatestFiniteMagnitude
+            )
         )
         layoutManager.addTextContainer(textContainer)
         document.textStorage.addLayoutManager(layoutManager)
@@ -98,6 +108,7 @@ public struct EditorView: NSViewRepresentable {
               let layoutManager = textView.layoutManager
         else { return }
         textView.delegate = nil
+        coordinator.detachLayoutManager()
         coordinator.stopObservingScrollView()
         coordinator.stopSyntaxHighlighting()
         scrollView.rulersVisible = false
@@ -187,8 +198,9 @@ public struct EditorView: NSViewRepresentable {
         textView.autoresizingMask = wrap ? [.width] : []
         scrollView.hasHorizontalScroller = !wrap
         textView.textContainer?.widthTracksTextView = wrap
+        textView.textContainer?.lineBreakMode = wrap ? .byWordWrapping : .byClipping
         textView.textContainer?.containerSize = NSSize(
-            width: wrap ? max(0, scrollView.contentSize.width) : CGFloat.greatestFiniteMagnitude,
+            width: wrap ? max(0, scrollView.contentSize.width) : Self.unwrappedLineWidth,
             height: CGFloat.greatestFiniteMagnitude
         )
 

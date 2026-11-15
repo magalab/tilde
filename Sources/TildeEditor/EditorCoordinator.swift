@@ -14,6 +14,10 @@ public final class EditorCoordinator: NSObject, NSTextViewDelegate {
     private var syntaxPalette = EditorThemePalette.light
     private var currentLineRange: NSRange?
     private var matchingDelimiterRanges: [NSRange] = []
+    private weak var observedScrollView: NSScrollView?
+    private weak var observedTextView: EditorTextView?
+    private var observedWindowLifecycleNames: [Notification.Name] = []
+    private(set) var isLayoutAttached = true
     var presentationState: EditorPresentationState?
 
     init(document: TextDocument, session: EditorSession) {
@@ -26,9 +30,17 @@ public final class EditorCoordinator: NSObject, NSTextViewDelegate {
             NotificationCenter.default.removeObserver(boundsObserver)
             self.boundsObserver = nil
         }
+        for name in observedWindowLifecycleNames {
+            NotificationCenter.default.removeObserver(self, name: name, object: nil)
+        }
+        observedWindowLifecycleNames.removeAll()
+        observedScrollView = nil
+        observedTextView = nil
     }
 
     func observeScrollView(_ scrollView: NSScrollView) {
+        observedScrollView = scrollView
+        observedTextView = scrollView.documentView as? EditorTextView
         scrollView.contentView.postsBoundsChangedNotifications = true
         boundsObserver = NotificationCenter.default.addObserver(
             forName: NSView.boundsDidChangeNotification,
@@ -41,6 +53,72 @@ public final class EditorCoordinator: NSObject, NSTextViewDelegate {
                 (scrollView.verticalRulerView as? LineNumberRulerView)?.needsDisplay = true
             }
         }
+
+        let center = NotificationCenter.default
+        let names: [Notification.Name] = [
+            NSWindow.didBecomeKeyNotification,
+            NSWindow.didResignKeyNotification,
+        ]
+        observedWindowLifecycleNames = names
+        for name in names {
+            center.addObserver(
+                self,
+                selector: #selector(windowLifecycleChanged(_:)),
+                name: name,
+                object: nil
+            )
+        }
+        DispatchQueue.main.async { [weak self, weak scrollView] in
+            guard let self, let scrollView else { return }
+            self.updateLayoutAttachment(for: scrollView)
+        }
+    }
+
+    @objc private func windowLifecycleChanged(_ notification: Notification) {
+        guard let scrollView = observedScrollView,
+              let window = notification.object as? NSWindow,
+              window === scrollView.window
+        else { return }
+        updateLayoutAttachment(for: scrollView)
+    }
+
+    /// Inactive AppKit tabs keep their document alive, but do not need a layout tree.
+    /// Text and undo remain attached to the document; the layout manager is rebuilt from
+    /// the same storage when the tab becomes the key window again.
+    private func updateLayoutAttachment(for scrollView: NSScrollView) {
+        guard let window = scrollView.window else { return }
+        let isInactiveTab = window.tabGroup.map { tabGroup in
+            tabGroup.windows.count > 1 && tabGroup.selectedWindow !== window
+        } ?? false
+        guard !isInactiveTab else {
+            detachLayoutManager()
+            return
+        }
+        attachLayoutManager()
+    }
+
+    private func attachLayoutManager() {
+        guard !isLayoutAttached,
+              let textView = observedTextView,
+              let layoutManager = textView.layoutManager
+        else { return }
+        document.textStorage.addLayoutManager(layoutManager)
+        isLayoutAttached = true
+        layoutManager.invalidateLayout(
+            forCharacterRange: NSRange(location: 0, length: document.textStorage.length),
+            actualCharacterRange: nil
+        )
+        textView.needsLayout = true
+        textView.needsDisplay = true
+    }
+
+    func detachLayoutManager() {
+        guard isLayoutAttached,
+              let textView = observedTextView,
+              let layoutManager = textView.layoutManager
+        else { return }
+        document.textStorage.removeLayoutManager(layoutManager)
+        isLayoutAttached = false
     }
 
     func refreshSyntaxHighlighting(
@@ -48,6 +126,7 @@ public final class EditorCoordinator: NSObject, NSTextViewDelegate {
         palette: EditorThemePalette,
         edit: TextEdit? = nil
     ) {
+        guard isLayoutAttached else { return }
         if edit == nil,
            let lastObservedRevision,
            lastObservedRevision != document.revision
